@@ -44,6 +44,7 @@ This is done by adjusting the [AkSearchWeb](https://github.com/acdh-oeaw/AkSearc
     * Append your module's name (namespace) at the end of the `VUFIND_LOCAL_MODULES` environment variable defined in the last line of the `Dockerfile` in the repository root directory.
     * Append your module's name (namespace) at the end of the `VUFIND_LOCAL_MODULES` environment variable in the `docker-compose.yaml` in the repository root directory
       (so people deploying with just `docker-compose up` have it as well).
+    * Adjust the `VUFIND_LOCAL_MODULES` environment variable documentation in the `README.md`.
 * Try to build the image locally by running `docker build -t acdhcd/aksearch-web .` in the repository root directory 
   and then try to deploy with `docker-composer up`.
   Finally check if everything stil works by opening http://127.0.0.1/vufind in your browser.
