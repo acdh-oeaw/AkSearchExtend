@@ -1,0 +1,21 @@
+{
+    "name": "acdh-oeaw/aksearchextend",
+    "type": "library",
+    "description": "A sample extension module for VuFind/AkSearch",
+    "keywords": [],
+    "homepage": "https://github.com/acdh-oeaw/AkSearchExtend",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Mateusz Żółtak",
+            "email": "mzoltak@oeaw.ac.at"
+        }
+    ],
+    "require": {
+    },
+    "autoload": {
+        "psr-4": {
+            "aksearchextend\\": "src/aksearchextend"
+        }
+    }
+}
