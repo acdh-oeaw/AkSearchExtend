@@ -4,6 +4,8 @@ An example of extending the [ACDH deployment of AkSearch](https://github.com/acd
 
 ## How does it work?
 
+(Description below applies to the current AkSearch which is based on VuFind 6. Some stuff will change with Vufind >= 7 which migrated from Zend2 to Laminas).
+
 ### Making the code loadable by VuFind/AkSearch
 
 VuFind/AkSearch are written using Zend2 framework and extending/adjusting them goes down to implementation of you own Zend2 module(s).
@@ -14,7 +16,7 @@ To get your code being recognized and properly loaded by a Zend2 you must:
 * Create a `{my module name}\Module` class implementing `getAutoloaderConfig()` and `getConfig()` methods.
     * The `getAutoloaderConfig()` should just return an empty array (as composer will deal with autoloading for us and we don't need Zend2 for that).
     * The `getConfig()` class should return a Zend2/VuFind module configuration.
-    * The minimal implementation for the `aksearchExt` module (making it Zend-2 loadable but nothing more than that) would look as follows:
+    * The minimal implementation for the `aksearchExt` module (making it Zend2-loadable but nothing more than that) would look as follows:
       ```php
       class aksearchExt\Module {
           public function getAutoloaderConfig() {

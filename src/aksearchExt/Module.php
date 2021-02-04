@@ -12,7 +12,7 @@ class Module {
                 'plugin_managers' => [
                     'recorddriver' => [
                         'aliases' => [
-                            'VuFind\RecordDriver\SolrMarc' => 'aksearchextend\SolrMarc',
+                            'VuFind\RecordDriver\SolrMarc' => 'aksearchExt\SolrMarc',
                         ],
                     ],
                 ],
