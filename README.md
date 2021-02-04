@@ -61,5 +61,5 @@ The difficult part is you can plug your code in hundreds of places. See e.g. all
 
 Module provided in this repository just overrides the `getThumbnail()` method of the AkSearch's `SolrMarc` record driver to always return an ARCHE logo.
 
-This is achieved by overriding the `VuFind\RecordDriver\SolrMarc` class with this module's `aksearchextend\SolrMarc` class, where the `aksearchextend\SolrMarc` just extends `AkSearch\RecordDriver\SolrMarc` reimplementing the `getThumbnail()` method. See the [Module.php]() and [SolrMarc.php]().
+This is achieved by overriding the `VuFind\RecordDriver\SolrMarc` class with this module's `aksearchextend\SolrMarc` class, where the `aksearchextend\SolrMarc` just extends `AkSearch\RecordDriver\SolrMarc` reimplementing the `getThumbnail()` method. See the [Module.php](https://github.com/acdh-oeaw/AkSearchExtend/blob/master/src/aksearchextend/Module.php) and [SolrMarc.php](https://github.com/acdh-oeaw/AkSearchExtend/blob/master/src/aksearchextend/SolrMarc.php).
 
