@@ -1,6 +1,7 @@
 <?php
+namespace aksearchExt
 
-class aksearchextend\SolrMarc extends AkSearch\RecordDriver\SolrMarc {
+class SolrMarc extends AkSearch\RecordDriver\SolrMarc {
     public function getThumbnail($size = 'small'){
         return 'https://arche.acdh.oeaw.ac.at/browser/themes/contrib/arche-theme/logo.svg';
 	}

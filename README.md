@@ -10,13 +10,13 @@ VuFind/AkSearch are written using Zend2 framework and extending/adjusting them g
 
 To get your code being recognized and properly loaded by a Zend2 you must:
 
-* Choose your module name (here it's `aksearchextend`).
+* Choose your module name (here it's `aksearchExt`).
 * Create a `{my module name}\Module` class implementing `getAutoloaderConfig()` and `getConfig()` methods.
     * The `getAutoloaderConfig()` should just return an empty array (as composer will deal with autoloading for us and we don't need Zend2 for that).
     * The `getConfig()` class should return a Zend2/VuFind module configuration.
-    * The minimal implementation for the `vufindextend` module (making it Zend-2 loadable but nothing more than that) would look as follows:
+    * The minimal implementation for the `aksearchExt` module (making it Zend-2 loadable but nothing more than that) would look as follows:
       ```php
-      class aksearchextend\Module {
+      class aksearchExt\Module {
           public function getAutoloaderConfig() {
               return [];
           }
@@ -27,7 +27,7 @@ To get your code being recognized and properly loaded by a Zend2 you must:
       ```
 * Create a `composer.json` for your module making it able to publish it as a composer package.
   Don't forget to define autoloading properly.
-  If you need an example, just look at the `composer.json` in this repo root (it publishes this module as a `acdh-oeaw/aksearchextend` composer package).
+  If you need an example, just look at the `composer.json` in this repo root (it publishes this module as a `acdh-oeaw/aksearchExt` composer package).
 * Publish your code as a composer package (put it into a publicly reachable git repo and then publish on https://packagist.org/).
 
 ### Setting up VuFind/AkSearch to actually load your code
@@ -61,5 +61,5 @@ The difficult part is you can plug your code in hundreds of places. See e.g. all
 
 Module provided in this repository just overrides the `getThumbnail()` method of the AkSearch's `SolrMarc` record driver to always return an ARCHE logo.
 
-This is achieved by overriding the `VuFind\RecordDriver\SolrMarc` class with this module's `aksearchextend\SolrMarc` class, where the `aksearchextend\SolrMarc` just extends `AkSearch\RecordDriver\SolrMarc` reimplementing the `getThumbnail()` method. See the [Module.php](https://github.com/acdh-oeaw/AkSearchExtend/blob/master/src/aksearchextend/Module.php) and [SolrMarc.php](https://github.com/acdh-oeaw/AkSearchExtend/blob/master/src/aksearchextend/SolrMarc.php).
+This is achieved by overriding the `VuFind\RecordDriver\SolrMarc` class with this module's `aksearchExt\SolrMarc` class, where the `aksearchExt\SolrMarc` just extends `AkSearch\RecordDriver\SolrMarc` reimplementing the `getThumbnail()` method. See the [Module.php](https://github.com/acdh-oeaw/AkSearchExtend/blob/master/src/aksearchExt/Module.php) and [SolrMarc.php](https://github.com/acdh-oeaw/AkSearchExtend/blob/master/src/aksearchExt/SolrMarc.php).
 

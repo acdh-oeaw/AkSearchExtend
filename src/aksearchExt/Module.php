@@ -1,5 +1,7 @@
 <?php
-class aksearchextend\Module {
+namespace aksearchExt;
+
+class Module {
     public function getAutoloaderConfig() {
         return [];
     }

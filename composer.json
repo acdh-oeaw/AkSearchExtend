@@ -1,5 +1,5 @@
 {
-    "name": "acdh-oeaw/aksearchextend",
+    "name": "acdh-oeaw/aksearch-ext",
     "description": "A sample extension module for VuFind/AkSearch",
     "keywords": [],
     "homepage": "https://github.com/acdh-oeaw/AkSearchExtend",
@@ -11,10 +11,11 @@
         }
     ],
     "require": {
+        "php": ">=7"
     },
     "autoload": {
         "psr-4": {
-            "aksearchextend\\": "src/aksearchextend"
+            "aksearchExt\\": "src/aksearchExt"
         }
     }
 }
