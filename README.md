@@ -74,3 +74,7 @@ To be able to live test your module:
     * Your module's code mounted under `/usr/local/vufind/vendor/{your-organization}/{your-composer-package-name}`.
     * `APPLICATION_ENV` set to `development` (which would turn off Zend2 classmap caching and save you a lot of headache).
 
+## Deploying on sisyphos
+
+To deploy your module on sisyphos instance you must add your module name to the `VUFIND_LOCAL_MODULES` environment variable defined in this instance's `docker-compose.yaml`
+(using the Portainer GUI).
