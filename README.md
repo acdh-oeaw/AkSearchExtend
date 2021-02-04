@@ -41,8 +41,8 @@ This is done by adjusting the [AkSearchWeb](https://github.com/acdh-oeaw/AkSearc
   either by running `composer require your-organization/your-composer-package-name` in the repository's root directory 
   or adding your package name to the `require` section of the `composer.json` manually.
 * Include your Zend2 module name in the list of modules being loaded by the VuFind/AkSearch.
-    * Append your module's name (namespace) at the end of the `VUFIND_LOCAL_MODULES` environment variable defined in the last line of the `Dockerfile` in the repository root directory.
-    * Append your module's name (namespace) at the end of the `VUFIND_LOCAL_MODULES` environment variable in the `docker-compose.yaml` in the repository root directory
+    * Append your module's name (namespace) **at the end** of the `VUFIND_LOCAL_MODULES` environment variable defined in the last line of the `Dockerfile` in the repository root directory.
+    * Append your module's name (namespace) **at the end** of the `VUFIND_LOCAL_MODULES` environment variable in the `docker-compose.yaml` in the repository root directory
       (so people deploying with just `docker-compose up` have it as well).
     * Adjust the `VUFIND_LOCAL_MODULES` environment variable documentation in the `README.md`.
 * Try to build the image locally by running `docker build -t acdhcd/aksearch-web .` in the repository root directory 
@@ -78,3 +78,16 @@ To be able to live test your module:
 
 To deploy your module on sisyphos instance you must add your module name to the `VUFIND_LOCAL_MODULES` environment variable defined in this instance's `docker-compose.yaml`
 (using the Portainer GUI).
+
+## Comparison with clone "AkSearch and adjust" development
+
+Instead of finding a place in the VuFind/AkSearch code we would like to adjust and adjusting it on our very own copy (fork) of the VuFind/AkSearch code:
+
+* Find a place in the VuFind/AkSearch code you would like to adjust.
+    * If it's AkSearch code, compare it with a corresponding part in the VuFind (most AkSearch classes inherit from Vufind ones) and assess if there is a space for optimization.
+      AkSearch tends to copy-paste VuFind methods it overrides instead of using the "call VuFind implementation and add only what is needed on top of that".
+      If it's the case, we would prefer to use VuFind as a base and rewrite both AkSearch and our additions in the "call VuFind implementation and add only what is needed on top of that" way.
+* Create a class in your module extending the corresponding VuFind/AkSearch class and implement adjustments you want to introduce
+  using the "call the original VuFind/AkSearch method and made your adjustments on its output" (or on the input you pass to it or both).
+* Copy-paste configuration mappings for the class you extended from the VuFind/AkSearch module config into your module config and change the mappings to the class you created.
+
