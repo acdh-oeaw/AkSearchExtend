@@ -1,6 +1,13 @@
 # AkSearchExtend
 
-An example of extending the [ACDH deployment of AkSearch](https://github.com/acdh-oeaw/AkSearchWeb) with your very own module being loaded using Composer.
+Extensions of the VuFind/AkSearch for the [ACDH deployment of AkSearch](https://github.com/acdh-oeaw/AkSearchWeb).
+
+Can also serve as an example of extending VuFind with your own module being loaded using Composer (see intstructions below).
+
+## What is being added by this module
+
+* List of available holdings for so called LKR records.
+  This is done by overwritting the `VuFind\RecordDriver\SolrMarc` with our own class `aksearchExt\SolrMarc` extending `AkSearch\RecordDriver\SolrMarc` and reimplementing the `getRealTimeHoldings()` method.
 
 ## How does it work?
 
@@ -41,11 +48,10 @@ This is done by adjusting the [AkSearchWeb](https://github.com/acdh-oeaw/AkSearc
   either by running `composer require your-organization/your-composer-package-name` in the repository's root directory 
   or adding your package name to the `require` section of the `composer.json` manually.
 * Include your Zend2 module name in the list of modules being loaded by the VuFind/AkSearch.
-    * Append your module's name (namespace) **at the end** of the `VUFIND_LOCAL_MODULES` environment variable defined in the last line of the `Dockerfile` in the repository root directory.
-    * Append your module's name (namespace) **at the end** of the `VUFIND_LOCAL_MODULES` environment variable in the `docker-compose.yaml` in the repository root directory
+    * Append your module's name (namespace) at the end of the `VUFIND_LOCAL_MODULES` environment variable defined in the last line of the `Dockerfile` in the repository root directory.
+    * Append your module's name (namespace) at the end of the `VUFIND_LOCAL_MODULES` environment variable in the `docker-compose.yaml` in the repository root directory
       (so people deploying with just `docker-compose up` have it as well).
-    * Adjust the `VUFIND_LOCAL_MODULES` environment variable documentation in the `README.md`.
-* Try to build the image locally by running `docker build -t acdhcd/aksearch-web .` in the repository root directory 
+* Try to build the image locally by running `docker build -t acdhch/aksearch-web .` in the repository root directory 
   and then try to deploy with `docker-composer up`.
   Finally check if everything stil works by opening http://127.0.0.1/vufind in your browser.
 * If everything's fine, commit changes and push the repository to the GitHub.
@@ -61,10 +67,6 @@ The good thing is it's all done by adjusting what your module's `Module::getConf
 
 The difficult part is you can plug your code in hundreds of places. See e.g. all class mappings provided in [VuFind's main module config](https://biapps.arbeiterkammer.at/gitlab/open/aksearch/aksearch/blob/aksearch/module/VuFind/config/module.config.php) or overrides defined by [AkSearch's AkSearch module config](https://gitlab.com/acdh-oeaw/oeaw-resources/module-core/-/blob/master/config/module.config.php).
 
-Module provided in this repository just overrides the `getThumbnail()` method of the AkSearch's `SolrMarc` record driver so it always returns an ARCHE logo URL.
-
-This is achieved by overriding the `VuFind\RecordDriver\SolrMarc` class with this module's `aksearchExt\SolrMarc` class, where the `aksearchExt\SolrMarc` just extends `AkSearch\RecordDriver\SolrMarc` reimplementing only the `getThumbnail()` method. See the [Module.php](https://github.com/acdh-oeaw/AkSearchExtend/blob/master/src/aksearchExt/Module.php) and [SolrMarc.php](https://github.com/acdh-oeaw/AkSearchExtend/blob/master/src/aksearchExt/SolrMarc.php).
-
 ## Live development
 
 To be able to live test your module:
@@ -73,21 +75,4 @@ To be able to live test your module:
 * Run the aksearch-web container with:
     * Your module's code mounted under `/usr/local/vufind/vendor/{your-organization}/{your-composer-package-name}`.
     * `APPLICATION_ENV` set to `development` (which would turn off Zend2 classmap caching and save you a lot of headache).
-
-## Deploying on sisyphos
-
-To deploy your module on sisyphos instance you must add your module name to the `VUFIND_LOCAL_MODULES` environment variable defined in this instance's `docker-compose.yaml`
-(using the Portainer GUI).
-
-## Comparison with clone "AkSearch and adjust" development
-
-Instead of finding a place in the VuFind/AkSearch code we would like to adjust and adjusting it on our very own copy (fork) of the VuFind/AkSearch code:
-
-* Find a place in the VuFind/AkSearch code you would like to adjust.
-    * If it's AkSearch code, compare it with a corresponding part in the VuFind (most AkSearch classes inherit from Vufind ones) and assess if there is a space for optimization.
-      AkSearch tends to copy-paste VuFind methods it overrides instead of using the "call VuFind implementation and add only what is needed on top of that".
-      If it's the case, we would prefer to use VuFind as a base and rewrite both AkSearch and our additions in the "call VuFind implementation and add only what is needed on top of that" way.
-* Create a class in your module extending the corresponding VuFind/AkSearch class and implement adjustments you want to introduce
-  using the "call the original VuFind/AkSearch method and made your adjustments on its output" (or on the input you pass to it or both).
-* Copy-paste configuration mappings for the class you extended from the VuFind/AkSearch module config into your module config and change the mappings to the class you created.
 
