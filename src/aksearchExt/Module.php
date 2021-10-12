@@ -11,9 +11,17 @@ class Module {
             'vufind' => [
                 'plugin_managers' => [
                     'recorddriver' => [
-                        'aliases' => [
-                            'VuFind\RecordDriver\SolrMarc' => 'aksearchExt\SolrMarc',
+                        'factories' => [
+                            'aksearchExt\SolrMarc' => 'VuFind\RecordDriver\SolrDefaultFactory'
                         ],
+                        'aliases' => [
+                            'VuFind\RecordDriver\SolrMarc' => 'aksearchExt\SolrMarc'
+                        ],
+                        'delegators' => [
+                            'aksearchExt\SolrMarc' => [
+                                'AkSearch\RecordDriver\IlsAwareDelegatorFactory'
+                            ]
+                        ]
                     ],
                 ],
             ],

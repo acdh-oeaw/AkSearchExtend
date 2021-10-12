@@ -6,8 +6,9 @@ Can also serve as an example of extending VuFind with your own module being load
 
 ## What is being added by this module
 
-* List of available holdings for so called LKR records.
-  This is done by overwritting the `VuFind\RecordDriver\SolrMarc` with our own class `aksearchExt\SolrMarc` extending `AkSearch\RecordDriver\SolrMarc` and reimplementing the `getRealTimeHoldings()` method.
+* List of available holdings for so-called LKR records.
+  This is done by overwritting the `VuFind\RecordDriver\SolrMarc` with our own class `aksearchExt\SolrMarc`.
+  `aksearchExt\SolrMarc` extends `AkSearch\RecordDriver\SolrMarc` and reimplements the `getRealTimeHoldings()` method (coming from `VuFind\RecordDriver\IlsAwareTrait` being used by the `AkSearch\RecordDriver\SolrMarc`).
 
 ## How does it work?
 
@@ -66,6 +67,7 @@ The most tricky part is to find out the right place to plug in your own adjustme
 The good thing is it's all done by adjusting what your module's `Module::getConfig()` method returns (denoted below as `$cfg`).
 
 The difficult part is you can plug your code in hundreds of places. See e.g. all class mappings provided in [VuFind's main module config](https://biapps.arbeiterkammer.at/gitlab/open/aksearch/aksearch/blob/aksearch/module/VuFind/config/module.config.php) or overrides defined by [AkSearch's AkSearch module config](https://gitlab.com/acdh-oeaw/oeaw-resources/module-core/-/blob/master/config/module.config.php).
+**Be aware** that despite providing a class alias you may also need to define factories and/or delegators for your class - see just mentioned examples and the `src/aksearchExt/Module.php` file in this repository.
 
 ## Live development
 

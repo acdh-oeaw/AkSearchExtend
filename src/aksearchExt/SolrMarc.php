@@ -6,7 +6,8 @@ use VuFindSearch\Query\Query;
 use VuFindSearch\ParamBag;
 
 class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
-    public function _getRealTimeHoldings()
+
+    public function getRealTimeHoldings()
     {
         $id = $this->getUniqueID();
 
@@ -27,7 +28,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $results = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
 
         // if record is an LKR, remove items not matching the barcode
-        if ($lkrData !== null) {
+        if (!empty($barcode)) {
             $holdings = $results['holdings'];
             $results['holdings'] = [];
             foreach ($holdings as $key => $location) {
@@ -52,7 +53,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         if ($v === false) {
             return null;
         }
-        $v = $v->getSubfield($substr($field, -1));
+        $v = $v->getSubfield(substr($field, -1));
         return $v ? $v->getData() : null;
     }
 }
