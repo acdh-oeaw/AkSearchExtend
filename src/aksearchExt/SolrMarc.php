@@ -1,4 +1,5 @@
 <?php
+
 namespace aksearchExt;
 
 use File_MARC_Data_Field;
@@ -7,20 +8,32 @@ use VuFindSearch\ParamBag;
 
 class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
-    public function getRealTimeHoldings()
-    {
+    /**
+     * Check the actual resource is Open Access or not
+     * @return bool
+     */
+    public function getOpenAccessData(): bool {
+        if($this->getMarcRecord()->getField(506) !== false) {
+            return true;            
+        }
+        return false;
+    }
+
+    public function getRealTimeHoldings() {
         $id = $this->getUniqueID();
 
         // check if the record is an LKR one
         $lkrValue = 'LKR/ITM-OeAW';
         $marc = $this->getMarcRecord();
+
         $f970a = $this->getMarcField($marc, '970a');
         $f773w = $this->getMarcField($marc, '773w');
         $f773g = $this->getMarcField($marc, '773g');
+
         if ($f970a === $lkrValue && !empty($f773w) && !empty($f773g)) {
             $ctrlnum = preg_replace('/^.*[)]/', '', $f773w);
-            $record  = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, new ParamBag(['fl' => 'id']))->first();
-            $id      = $record->getRawData()['id'];
+            $record = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, new ParamBag(['fl' => 'id']))->first();
+            $id = $record->getRawData()['id'];
             $barcode = preg_replace('/^.*:/', '', $f773g);
         }
 
@@ -56,5 +69,5 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $v = $v->getSubfield(substr($field, -1));
         return $v ? $v->getData() : null;
     }
-}
 
+}
