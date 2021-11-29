@@ -13,10 +13,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @return bool
      */
     public function getOpenAccessData(): bool {
-        if($this->getMarcRecord()->getField(506) !== false) {
-            return true;            
-        }
-        return false;
+        return $this->getMarcRecord()->getField(506) !== false;
     }
 
     public function getRealTimeHoldings() {
