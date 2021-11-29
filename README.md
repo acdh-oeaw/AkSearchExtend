@@ -9,6 +9,9 @@ Can also serve as an example of extending VuFind with your own module being load
 * List of available holdings for so-called LKR records.
   This is done by overwritting the `VuFind\RecordDriver\SolrMarc` with our own class `aksearchExt\SolrMarc`.
   `aksearchExt\SolrMarc` extends `AkSearch\RecordDriver\SolrMarc` and reimplements the `getRealTimeHoldings()` method (coming from `VuFind\RecordDriver\IlsAwareTrait` being used by the `AkSearch\RecordDriver\SolrMarc`).
+* Recognition of open access records based on the 506 MARC field (by the `aksearchExt\SolrMarc::getOpenAccessData()`)
+* Adaptive record id retrieval based on the context (implemented in the `aksearchExt\SolrMarc::getUniqueID()` overridding VuFind\RecordDriver\SolrMarc::getUniqueID()`).
+  * When the identifier used for parent-child relation is required, an AC identifier (MARC field 009) is used instead of ordinary id (MARC field 001).
 
 ## How does it work?
 

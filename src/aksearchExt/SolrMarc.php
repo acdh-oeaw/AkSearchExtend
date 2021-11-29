@@ -17,6 +17,21 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     }
 
     /**
+     * OEAW library uses AC ids (ones stored in MARC field 009, they are also extracted into solr field `ctrlnum` 
+     * but there are different ids in the `ctrlnum` solr fields as well) for denoting parent-child relations between resources.
+     *
+     * This implementation of getUniqueID() checks if it's called in such a context and serves the AC id when it's needed.
+     * Otherwise is serves the ordinary id (the one from the `id` solr field)
+     */ 
+    public function getUniqueID() {
+        $caller = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1];
+        if (($caller['class'] ?? '') !== RecordLink::class || ($caller['function'] ?? '') !== 'getChildRecordSearchUrl') {
+            return parent::getUniqueID();
+        }
+        return $this->getMarcRecord()->getField(9)->getData();
+    }
+    
+    /**
      * Special implementation of getRealTimeHoldings() taking care of very specific field mappings
      * See https://redmine.acdh.oeaw.ac.at/issues/19566 for details
      */
