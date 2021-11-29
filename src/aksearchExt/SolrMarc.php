@@ -5,6 +5,7 @@ namespace aksearchExt;
 use File_MARC_Data_Field;
 use VuFindSearch\Query\Query;
 use VuFindSearch\ParamBag;
+use VuFind\View\Helper\Root\RecordLink;
 
 class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
