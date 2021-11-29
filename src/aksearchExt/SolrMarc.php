@@ -16,6 +16,10 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         return $this->getMarcRecord()->getField(506) !== false;
     }
 
+    /**
+     * Special implementation of getRealTimeHoldings() taking care of very specific field mappings
+     * See https://redmine.acdh.oeaw.ac.at/issues/19566 for details
+     */
     public function getRealTimeHoldings() {
         $id = $this->getUniqueID();
 
