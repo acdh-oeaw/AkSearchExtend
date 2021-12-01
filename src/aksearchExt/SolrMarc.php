@@ -37,10 +37,10 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      *
      * This implementation of getUniqueID() checks if it's called in such a context and serves the AC id when it's needed.
      * Otherwise is serves the ordinary id (the one from the `id` solr field)
-     */ 
+     */
     public function getUniqueID() {
         $caller = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1];
-        $caller = ($caller['class'] ?? '').'::'.($caller['function'] ?? '');
+        $caller = ($caller['class'] ?? '') . '::' . ($caller['function'] ?? '');
         if (!in_array($caller, self::$acIdCallers)) {
             return parent::getUniqueID();
         }
@@ -56,7 +56,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         // check if the record is an LKR one
         $lkrValue = 'LKR/ITM-OeAW';
-        $marc = $this->getMarcRecord();
+        $marc     = $this->getMarcRecord();
 
         $f970a = $this->getMarcField($marc, '970a');
         $f773w = $this->getMarcField($marc, '773w');
@@ -64,8 +64,9 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         if ($f970a === $lkrValue && !empty($f773w) && !empty($f773g)) {
             $ctrlnum = preg_replace('/^.*[)]/', '', $f773w);
-            $record = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, new ParamBag(['fl' => 'id']))->first();
-            $id = $record->getRawData()['id'];
+            $param   = new ParamBag(['fl' => 'id']);
+            $record  = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, $param)->first();
+            $id      = $record->getRawData()['id'];
             $barcode = preg_replace('/^.*:/', '', $f773g);
         }
 
@@ -74,10 +75,10 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         // if record is an LKR, remove items not matching the barcode
         if (!empty($barcode)) {
-            $holdings = $results['holdings'];
+            $holdings            = $results['holdings'];
             $results['holdings'] = [];
             foreach ($holdings as $key => $location) {
-                $items = $location['items'];
+                $items             = $location['items'];
                 $location['items'] = [];
                 foreach ($items as $item) {
                     if ($item['barcode'] === $barcode) {
@@ -101,5 +102,4 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $v = $v->getSubfield(substr($field, -1));
         return $v ? $v->getData() : null;
     }
-
 }
