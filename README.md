@@ -13,6 +13,8 @@ Can also serve as an example of extending VuFind with your own module being load
 * Adaptive record id retrieval based on the context (implemented in the `aksearchExt\SolrMarc::getUniqueID()` overridding VuFind\RecordDriver\SolrMarc::getUniqueID()`).
   * When the identifier used for parent-child relation is required, an AC identifier (MARC field 009) is used instead of ordinary id (MARC field 001).
 
+The detailed description of particular features is included in the `docs` folder.
+
 ## How does it work?
 
 Remark - description below applies to the current AkSearch which is based on VuFind 6. Some stuff will change with Vufind >= 7 which migrated from Zend2 to Laminas.
