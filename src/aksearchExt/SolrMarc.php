@@ -24,6 +24,27 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     }
 
     /**
+     * To bypass how AkSearch displays the "Published in" field in the single record view
+     * without overriding the `AkSearch\View\Helper\Root\RecordDataFormatterFactory::getDefaultCoreSpecs()`
+     * 
+     * It's a little messy because the `hierarchy_parent_id` solr field is an array
+     * while `container_title` (used by `getContainerTitle`) is single-valued.
+     */
+    public function getConsolidatedParents() {
+        $parents = $this->fields['hierarchy_parent_id'] ?? [];
+        $parents = is_array($parents) ? $parents : [$parents];
+        if (count($parents) === 0) {
+            return null;
+        }
+        $title = $this->getContainerTitle();
+        return [[
+            'id'    => $parents[0],
+            'title' => $this->getContainerTitle(),
+            'volNo' => '',
+        ]];
+    }
+
+    /**
      * Check the actual resource is Open Access or not
      * @return bool
      */
