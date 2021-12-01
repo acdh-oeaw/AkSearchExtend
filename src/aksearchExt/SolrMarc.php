@@ -6,8 +6,22 @@ use File_MARC_Data_Field;
 use VuFindSearch\Query\Query;
 use VuFindSearch\ParamBag;
 use VuFind\View\Helper\Root\RecordLink;
+use VuFind\RecordTab\ComponentParts;
 
 class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
+
+    static private $acIdCallers = [
+        RecordLink::class . '::getChildRecordSearchUrl',
+        ComponentParts::class . '::getResults',
+    ];
+
+    /**
+     * Restores the getContainerTitle() to the VuFind original one
+     * (AkSearch provided own version based on custom fields)
+     */
+    public function getContainerTitle() {
+        return \VuFind\RecordDriver\DefaultRecord::getContainerTitle();
+    }
 
     /**
      * Check the actual resource is Open Access or not
@@ -26,12 +40,13 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      */ 
     public function getUniqueID() {
         $caller = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1];
-        if (($caller['class'] ?? '') !== RecordLink::class || ($caller['function'] ?? '') !== 'getChildRecordSearchUrl') {
+        $caller = ($caller['class'] ?? '').'::'.($caller['function'] ?? '');
+        if (!in_array($caller, self::$acIdCallers)) {
             return parent::getUniqueID();
         }
         return $this->getMarcRecord()->getField(9)->getData();
     }
-    
+
     /**
      * Special implementation of getRealTimeHoldings() taking care of very specific field mappings
      * See https://redmine.acdh.oeaw.ac.at/issues/19566 for details
