@@ -78,10 +78,10 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         // check if the record is an LKR one
         $lkrValue = 'LKR/ITM-OeAW';
         $marc     = $this->getMarcRecord();
-
-        $f970a = $this->getMarcField($marc, '970a');
-        $f773w = $this->getMarcField($marc, '773w');
-        $f773g = $this->getMarcField($marc, '773g');
+       
+        $f970a = $this->getMarcField($marc, 970, 7, null, 'a');
+        $f773w = $this->getMarcField($marc, 773, 1, 8, 'w');
+        $f773g = $this->getMarcField($marc, 773, 1, 8, 'g');
 
         if ($f970a === $lkrValue && !empty($f773w) && !empty($f773g)) {
             $ctrlnum = preg_replace('/^.*[)]/', '', $f773w);
@@ -89,10 +89,12 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             $record  = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, $param)->first();
             $id      = $record->getRawData()['id'];
             $barcode = preg_replace('/^.*:/', '', $f773g);
+            //print_r([$id, $barcode]);
         }
 
         // get holdings
         $results = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
+
 
         // if record is an LKR, remove items not matching the barcode
         if (!empty($barcode)) {
@@ -115,12 +117,25 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         return $results;
     }
 
-    private function getMarcField($marc, $field) {
-        $v = $marc->getField(substr($field, 0, -1));
-        if ($v === false) {
+    private function getMarcField($marc, $field, $ind1 = null, $ind2 = null, $subfield = null) {
+        $value = null;
+        foreach ($marc->getFields($field) as $i) {
+            if ($i instanceof File_MARC_Data_Field && (!empty($ind1) && intval($i->getIndicator(1)) !== $ind1 || !empty($ind2) && intval($i->getIndicator(2)) !== $ind2)) {
+                continue;
+            }
+            if ($value !== null) {
+                throw new \RuntimeException("More than one matching field");
+            }
+            $value = $i;
+        }
+        if ($value === null) {
             return null;
         }
-        $v = $v->getSubfield(substr($field, -1));
-        return $v ? $v->getData() : null;
+        if ($subfield === null) {
+            return $value->getData();
+        } else {
+            $value = $value->getSubfield($subfield);
+            return $value ? $value->getData() : null;
+        }
     }
 }
