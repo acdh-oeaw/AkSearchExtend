@@ -24,6 +24,15 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     }
 
     /**
+     * Restore getURLs behavior to the VuFind original one
+     * (AkSearch provided a really custom implementation)
+     * https://redmine.acdh.oeaw.ac.at/issues/19527
+     */
+    public function getURLs() {
+        return \Vufind\RecordDriver\SolrDefault::getURLs();
+    }
+
+    /**
      * To bypass how AkSearch displays the "Published in" field in the single record view
      * without overriding the `AkSearch\View\Helper\Root\RecordDataFormatterFactory::getDefaultCoreSpecs()`
      * 
@@ -78,7 +87,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         // check if the record is an LKR one
         $lkrValue = 'LKR/ITM-OeAW';
         $marc     = $this->getMarcRecord();
-       
+
         $f970a = $this->getMarcField($marc, 970, 7, null, 'a');
         $f773w = $this->getMarcField($marc, 773, 1, 8, 'w');
         $f773g = $this->getMarcField($marc, 773, 1, 8, 'g');
@@ -94,7 +103,6 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         // get holdings
         $results = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
-
 
         // if record is an LKR, remove items not matching the barcode
         if (!empty($barcode)) {
@@ -117,7 +125,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         return $results;
     }
 
-    private function getMarcField($marc, $field, $ind1 = null, $ind2 = null, $subfield = null) {
+    private function getMarcField($marc, $field, $ind1 = null, $ind2 = null,
+                                  $subfield = null) {
         $value = null;
         foreach ($marc->getFields($field) as $i) {
             if ($i instanceof File_MARC_Data_Field && (!empty($ind1) && intval($i->getIndicator(1)) !== $ind1 || !empty($ind2) && intval($i->getIndicator(2)) !== $ind2)) {
