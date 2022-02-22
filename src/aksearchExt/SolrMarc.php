@@ -29,7 +29,43 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * https://redmine.acdh.oeaw.ac.at/issues/19527
      */
     public function getURLs() {
-        return \Vufind\RecordDriver\SolrDefault::getURLs();
+        $retVal = [];
+
+        // Which fields/subfields should we check for URLs?
+        $fieldsToCheck = [
+            '856' => ['y', 'z', '3'], // Standard URL
+            '555' => ['a']         // Cumulative index/finding aids
+        ];
+
+        foreach ($fieldsToCheck as $field => $subfields) {
+            $urls = $this->getMarcRecord()->getFields($field);
+            if ($urls) {
+                foreach ($urls as $url) {
+                    // Is there an address in the current field?
+                    $address = $url->getSubfield('u');
+                    if ($address) {
+                        $address = $address->getData();
+
+                        // Is there a description?  If not, just use the URL itself.
+                        foreach ($subfields as $current) {
+                            $desc = $url->getSubfield($current);
+                            if ($desc) {
+                                break;
+                            }
+                        }
+                        if ($desc) {
+                            $desc = $desc->getData();
+                        } else {
+                            $desc = $address;
+                        }
+
+                        $retVal[] = ['url' => $address, 'desc' => $desc];
+                    }
+                }
+            }
+        }
+
+        return $retVal;
     }
 
     /**
