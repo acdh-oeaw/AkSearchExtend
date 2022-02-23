@@ -1,6 +1,6 @@
 # Displaying (simple) hierarchies
 
-Corresponding Redmine issues: [parent->childre](https://redmine.acdh.oeaw.ac.at/issues/19800), [child->parent](https://redmine.acdh.oeaw.ac.at/issues/19801).
+Corresponding Redmine issues: [parent->children](https://redmine.acdh.oeaw.ac.at/issues/19800), [child->parent](https://redmine.acdh.oeaw.ac.at/issues/19801).
 
 ## VuFind wiki requirements
 
