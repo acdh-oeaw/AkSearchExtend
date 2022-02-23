@@ -122,8 +122,10 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             $ctrlnum = preg_replace('/^.*[)]/', '', $f773w);
             $param   = new ParamBag(['fl' => 'id']);
             $record  = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, $param)->first();
-            $id      = $record->getRawData()['id'];
-            $barcode = preg_replace('/^.*:/', '', $f773g);
+            if ($record !== null) {
+                $id      = $record->getRawData()['id'];
+                $barcode = preg_replace('/^.*:/', '', $f773g);
+            }
             //print_r([$id, $barcode]);
         }
 
