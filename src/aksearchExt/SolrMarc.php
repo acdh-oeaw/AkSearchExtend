@@ -18,6 +18,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     /**
      * Restores the getContainerTitle() to the VuFind original one
      * (AkSearch provided own version based on custom fields)
+     * 
+     * @see getConsolidatedParents()
      */
     public function getContainerTitle() {
         return \VuFind\RecordDriver\DefaultRecord::getContainerTitle();
@@ -26,6 +28,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     /**
      * Search for URLs in MARC 856 taking URL from subfield u and label from
      * subfields 3 or x
+     * 
      * https://redmine.acdh.oeaw.ac.at/issues/19527
      */
     public function getURLs() {
@@ -56,6 +59,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * 
      * It's a little messy because the `hierarchy_parent_id` solr field is an array
      * while `container_title` (used by `getContainerTitle`) is single-valued.
+     * 
+     * https://redmine.acdh.oeaw.ac.at/issues/19801
      */
     public function getConsolidatedParents() {
         $parents = $this->fields['hierarchy_parent_id'] ?? [];
@@ -63,7 +68,6 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         if (count($parents) === 0) {
             return null;
         }
-        $title = $this->getContainerTitle();
         return [[
             'id'    => $parents[0],
             'title' => $this->getContainerTitle(),
@@ -85,6 +89,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      *
      * This implementation of getUniqueID() checks if it's called in such a context and serves the AC id when it's needed.
      * Otherwise is serves the ordinary id (the one from the `id` solr field)
+     * 
+     * Related to https://redmine.acdh.oeaw.ac.at/issues/19800
      */
     public function getUniqueID() {
         $caller = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1];
@@ -97,7 +103,9 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
     /**
      * Special implementation of getRealTimeHoldings() taking care of very specific field mappings
-     * See https://redmine.acdh.oeaw.ac.at/issues/19566 for details
+     * 
+     * https://redmine.acdh.oeaw.ac.at/issues/19566
+     * https://redmine.acdh.oeaw.ac.at/issues/14550
      */
     public function getRealTimeHoldings() {
         $id = $this->getUniqueID();
@@ -130,7 +138,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 $items             = $location['items'];
                 $location['items'] = [];
                 foreach ($items as $item) {
-                    if ($item['barcode'] === $barcode) {
+                    if ($item['barcode'] === $barcode || $item['enumeration_a'] === $barcode) {
                         $location['items'][] = $item;
                     }
                 }

@@ -27,10 +27,10 @@ class Module {
                     ],
                     'ils_driver'   => [
                         'factories' => [
-                            'AkSearch\ILS\Driver\Alma' => 'VuFind\ILS\Driver\AlmaFactory'
+                            'aksearchExt\Alma' => 'VuFind\ILS\Driver\AlmaFactory'
                         ],
                         'aliases'   => [
-                            'VuFind\ILS\Driver\Alma' => 'AkSearch\ILS\Driver\Alma'
+                            'VuFind\ILS\Driver\Alma' => 'aksearchExt\Alma'
                         ]
                     ],
                 ],
