@@ -1,7 +1,9 @@
 <?php
+
 namespace aksearchExt;
 
 class Module {
+
     public function getAutoloaderConfig() {
         return [];
     }
@@ -11,10 +13,10 @@ class Module {
             'vufind' => [
                 'plugin_managers' => [
                     'recorddriver' => [
-                        'factories' => [
+                        'factories'  => [
                             'aksearchExt\SolrMarc' => 'VuFind\RecordDriver\SolrDefaultFactory'
                         ],
-                        'aliases' => [
+                        'aliases'    => [
                             'VuFind\RecordDriver\SolrMarc' => 'aksearchExt\SolrMarc'
                         ],
                         'delegators' => [
@@ -23,9 +25,16 @@ class Module {
                             ]
                         ]
                     ],
+                    'ils_driver'   => [
+                        'factories' => [
+                            'AkSearch\ILS\Driver\Alma' => 'VuFind\ILS\Driver\AlmaFactory'
+                        ],
+                        'aliases'   => [
+                            'VuFind\ILS\Driver\Alma' => 'AkSearch\ILS\Driver\Alma'
+                        ]
+                    ],
                 ],
             ],
         ];
     }
 }
-
