@@ -184,7 +184,15 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         }
     }
 
-    private function checkElectronicHoldings(array $eh, $marc) {
+    /**
+     * Add the E-media Link for the electronic holdings  
+     * https://redmine.acdh.oeaw.ac.at/issues/19474
+     * 
+     * @param array $eh
+     * @param type $marc
+     * @return array
+     */
+    private function checkElectronicHoldings(array $eh, $marc): array {
         foreach($eh as $k => $v) {
             $electronic = $this->getMarcField($marc, 'AVE', null, null, 'x');
             if(!empty($electronic)) {
