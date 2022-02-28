@@ -52,6 +52,10 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         }
         return $retVal;
     }
+    
+    public function getElectronicURLs() {
+        error_log('ELECTrONIC URLS');
+    }
 
     /**
      * To bypass how AkSearch displays the "Published in" field in the single record view
@@ -117,7 +121,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $f970a = $this->getMarcField($marc, 970, 7, null, 'a');
         $f773w = $this->getMarcField($marc, 773, 1, 8, 'w');
         $f773g = $this->getMarcField($marc, 773, 1, 8, 'g');
-
+        
         if ($f970a === $lkrValue && !empty($f773w) && !empty($f773g)) {
             $ctrlnum = preg_replace('/^.*[)]/', '', $f773w);
             $param   = new ParamBag(['fl' => 'id']);
@@ -131,7 +135,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         // get holdings
         $results = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
-
+        
         // if record is an LKR, remove items not matching the barcode
         if (!empty($barcode)) {
             $holdings            = $results['holdings'];
@@ -149,7 +153,11 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 }
             }
         }
-
+        
+        if(isset($results['electronic_holdings'])) {
+            $results['electronic_holdings'] = $this->checkElectronicHoldings($results['electronic_holdings'], $marc);
+        }
+        
         return $results;
     }
 
@@ -175,4 +183,15 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             return $value ? $value->getData() : null;
         }
     }
+
+    private function checkElectronicHoldings(array $eh, $marc) {
+        foreach($eh as $k => $v) {
+            $electronic = $this->getMarcField($marc, 'AVE', null, null, 'x');
+            if(!empty($electronic)) {
+                $eh[$k]['e_url'] = $electronic; 
+            }
+        }
+        return $eh;
+    }
+
 }
