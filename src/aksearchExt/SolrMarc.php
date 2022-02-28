@@ -53,10 +53,6 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         return $retVal;
     }
     
-    public function getElectronicURLs() {
-        error_log('ELECTrONIC URLS');
-    }
-
     /**
      * To bypass how AkSearch displays the "Published in" field in the single record view
      * without overriding the `AkSearch\View\Helper\Root\RecordDataFormatterFactory::getDefaultCoreSpecs()`
