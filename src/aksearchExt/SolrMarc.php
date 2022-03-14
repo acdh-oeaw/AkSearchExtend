@@ -240,4 +240,169 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         return $eh;
     }
 
+    
+    /**
+     * AK: Get all possible contributors grouped by role in the right order.
+     * 
+     * TODO: Make that function shorter and cleaner if possible! Implement a fallback
+     * to MarcXML!
+     *
+     * @return array    An array with all contributors grouped by role
+     */
+    public function getContributorsByRole() {
+    
+        // Initialize return variable
+        $contributors = [];
+
+        // Initialize other variables
+        $name = null;
+        $role = null;
+        $auth = null;
+ 
+        // Get primary author
+        $primaryName = $this->fields['author'][0] ?? null;
+        $primaryRole = $this->fields['author_role'][0] ?? null;
+        $primaryAuth = $this->fields['author_GndNo_str'] ?? null;
+        
+        // Get primary corporate author
+        $corpName = $this->fields['author_corporate'][0] ?? null;
+        $corpRole = $this->fields['author_corporate_role'][0] ?? null;
+        $corpAuth = $this->fields['author_corporate_GndNo_str'] ?? null;
+
+        // Get primary meeting author
+        $meetingName = $this->fields['author_meeting_txt'] ?? null;
+        $meetingRole = $this->fields['author_meeting_role_str'] ?? null;
+        $meetingAuth = $this->fields['author_meeting_GndNo_str'] ?? null;
+
+        // Get secondary authors
+        $secNames = $this->fields['author2'] ?? null;
+        $secRole = $this->fields['author2_role'] ?? null;
+        
+        if($secNames !== null) {
+            $authors2 = $this->createSecondaryAuthors($secNames, $secRole);
+        }
+        // Get secondary corporate authors
+        $secCorps = $this->fields['author2_corporate_NameRoleGnd_str_mv'] ?? null;
+
+        // Get secondary meeting authors
+        $secMeetings = $this->fields['author2_meeting_NameRoleGnd_str_mv'] ?? null;
+
+        $secondaryNames = $this->fields['author2'][0] ?? null;
+        $secondaryRoles = $this->fields['author2_role'][0] ?? null;
+        $secondaryAuths = $this->fields['author2_GndNo_str'] ?? null;
+        
+        // Add primary person authors to array (values from Marc21 field 100)
+        if ($primaryName) {
+            $contributors[$primaryRole][] = [
+                'entity' => 'person',
+                'name' => $primaryName,
+                'role' => $primaryRole,
+                'auth' => $primaryAuth,
+                'primary' => true
+            ];
+        }
+
+        // Add primary corporation authors to array (values from Marc21 field 110)
+        if ($corpName) {
+            $contributors[$corpRole][] = [
+                'entity' => 'corporation',
+                'name' => $corpName,
+                'role' => $corpRole,
+                'auth' => $corpAuth,
+                'primary' => true
+            ];
+        }
+
+        // Add primary meeting authors to array (values from Marc21 field 111)
+        if ($meetingName) {
+            $contributors[$meetingRole][] = [
+                'entity' => 'meeting',
+                'name' => $meetingName,
+                'role' => $meetingRole,
+                'auth' => $meetingAuth,
+                'primary' => true
+            ];
+        }
+        
+        // Add secondary person authors to array (values from Marc21 field 700)
+        if ($authors2) {
+            $basicRole = $authors2[0]['role'];
+            foreach ($authors2 as $value) {
+                if(!isset($value['role'])) {
+                    $value['role'] = $basicRole;
+                }
+                // We have all values now, add them to the return array:
+                $contributors[$value['role']][] = [
+                    'entity' => 'person',
+                    'name' => $value['name'],
+                    'role' => $value['role'],
+                    'auth' => null,
+                    'primary' => false
+                ];
+            }
+        }
+
+        // Add secondary corporation authors to array (values from Marc21 field 710)
+        if ($secCorps) {
+            foreach ($secCorps as $key => $value) {
+                if (($key % 3) == 0) { // First of 3 values
+    				$name = $value;
+    			} else if (($key % 3) == 1) { // Second of 3 values
+    				$role = $value;
+    			}  else if (($key % 3) == 2) { // Third and last of 3 values
+    				$auth = $value;
+
+    				// We have all values now, add them to the return array:
+    				$contributors[$role][] = [
+                        'entity' => 'corporation',
+                        'name' => $name,
+                        'role' => $role,
+                        'auth' => $auth,
+                        'primary' => false
+                    ];
+    			}
+            }
+        }
+
+        // Add secondary meeting authors to array (values from Marc21 field 711)
+        if ($secMeetings) {
+            foreach ($secMeetings as $key => $value) {
+                if (($key % 3) == 0) { // First of 3 values
+    				$name = $value;
+    			} else if (($key % 3) == 1) { // Second of 3 values
+    				$role = $value;
+    			}  else if (($key % 3) == 2) { // Third and last of 3 values
+    				$auth = $value;
+
+    				// We have all values now, add them to the return array:
+    				$contributors[$role][] = [
+                        'entity' => 'meeting',
+                        'name' => $name,
+                        'role' => $role,
+                        'auth' => $auth,
+                        'primary' => false
+                    ];
+    			}
+            }
+        }
+
+        return $contributors;
+    }
+    
+    /**
+     * Create the MARC 700 field authors for the gui core-phtml
+     * @param type $names
+     * @param type $roles
+     * @return array
+     */
+    private function createSecondaryAuthors($names, $roles): array {
+        $authors2 = array();
+        foreach ($names as $key1 => $value1) {
+          // store IP
+          $authors2[$key1]['name'] = $value1; 
+          // store type of cam
+          $authors2[$key1]['role'] = $roles[$key1]; 
+        }
+        return $authors2;
+    }
 }
