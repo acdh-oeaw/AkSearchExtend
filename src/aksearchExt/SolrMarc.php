@@ -82,7 +82,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     public function getOpenAccessData(): bool {
         return $this->getMarcRecord()->getField(506) !== false;
     }
-
+    
     /**
      * OEAW library uses AC ids (ones stored in MARC field 009, they are also extracted into solr field `ctrlnum` 
      * but there are different ids in the `ctrlnum` solr fields as well) for denoting parent-child relations between resources.
@@ -131,7 +131,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         // get holdings
         $results = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
-        
+       
         // if record is an LKR, remove items not matching the barcode
         if (!empty($barcode)) {
             $holdings            = $results['holdings'];
@@ -150,12 +150,54 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             }
         }
         
+        $this->getHolding991992Data($marc, $results['holdings']);
+      
         if(isset($results['electronic_holdings'])) {
             $results['electronic_holdings'] = $this->checkElectronicHoldings($results['electronic_holdings'], $marc);
         }
         
         return $results;
     }
+    
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/19506
+     * Display Exemplarbeschreibung and Ex Libris data on the holdinstab
+     * @param type $marc
+     * @param type $data
+     */
+    private function getHolding991992Data($marc, &$data) {
+        //Exemplarbeschreibung
+        $keys992 = array('8', 'b', 'c', 'd', 'e', 'f', 'k', 'l', 'm', 'p', 'q', 'r', 's');
+        //exLibris
+        $keys991 = array('8', 'a', 'b', 'c', 'd', 'f', 'i', 'j', 'k', 'l', 'm', 't');
+        
+        foreach($data as $k => $v) {
+            if(isset($v['items'])) {
+                foreach($v['items'] as $ik => $iv) {
+                    $data[$k]['items'][$ik]['exLibris'] = $this->getFieldsByKeysAndField($marc, $keys991, '991');
+                    $data[$k]['items'][$ik]['exemplarbeschreibung'] = $this->getFieldsByKeysAndField($marc, $keys992, '992');
+                }
+            }
+        }
+    }
+    
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/19506
+     * @param type $marc
+     * @param type $keys
+     * @param type $field
+     * @return string
+     */
+    private function getFieldsByKeysAndField($marc, $keys, $field) {
+        $str = "";
+        foreach($keys as $k) {
+            if($this->getMarcField($marc, $field, null, null, $k) !== null && !empty($this->getMarcField($marc, $field, null, null, $k))) {
+                $str .= $this->getMarcField($marc, $field, null, null, $k).';<br>';
+            } 
+        }
+        return $str;        
+    }
+  
 
     private function getMarcField($marc, $field, $ind1 = null, $ind2 = null,
                                   $subfield = null) {
