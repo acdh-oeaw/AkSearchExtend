@@ -420,7 +420,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $primMeet = isset($this->fields['author_meeting_txt']) ? (array)$this->fields['author_meeting_txt'] : [];
         // Secondary authors
         $secPers = isset($this->fields['author2']) ? (array)$this->fields['author2'] : [];
-        $secRole = isset($this->fields['author2_role']) ? (array)$this->fields['author2_role_role'] : [];
+        $secRole = isset($this->fields['author2_role']) ? (array)$this->fields['author2_role'] : [];
         $secCorp = isset($this->fields['author2_corporate_txt_mv']) ? (array)$this->fields['author2_corporate_txt_mv'] : [];
         $secMeet = isset($this->fields['author2_meeting_txt_mv']) ? (array)$this->fields['author2_meeting_txt_mv'] : [];
         
