@@ -277,7 +277,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         // Get secondary authors
         $secNames = $this->fields['author2'] ?? null;
         $secRole = $this->fields['author2_role'] ?? null;
-        
+        $authors2 = array();
         if($secNames !== null) {
             $authors2 = $this->createSecondaryAuthors($secNames, $secRole);
         }
@@ -287,10 +287,6 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         // Get secondary meeting authors
         $secMeetings = $this->fields['author2_meeting_NameRoleGnd_str_mv'] ?? null;
 
-        $secondaryNames = $this->fields['author2'][0] ?? null;
-        $secondaryRoles = $this->fields['author2_role'][0] ?? null;
-        $secondaryAuths = $this->fields['author2_GndNo_str'] ?? null;
-        
         // Add primary person authors to array (values from Marc21 field 100)
         if ($primaryName) {
             $contributors[$primaryRole][] = [
@@ -346,21 +342,21 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         if ($secCorps) {
             foreach ($secCorps as $key => $value) {
                 if (($key % 3) == 0) { // First of 3 values
-    				$name = $value;
-    			} else if (($key % 3) == 1) { // Second of 3 values
-    				$role = $value;
-    			}  else if (($key % 3) == 2) { // Third and last of 3 values
-    				$auth = $value;
+                    $name = $value;
+                } else if (($key % 3) == 1) { // Second of 3 values
+                    $role = $value;
+                }  else if (($key % 3) == 2) { // Third and last of 3 values
+                    $auth = $value;
 
-    				// We have all values now, add them to the return array:
-    				$contributors[$role][] = [
+                    // We have all values now, add them to the return array:
+                    $contributors[$role][] = [
                         'entity' => 'corporation',
                         'name' => $name,
                         'role' => $role,
                         'auth' => $auth,
                         'primary' => false
                     ];
-    			}
+                }
             }
         }
 
@@ -368,21 +364,21 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         if ($secMeetings) {
             foreach ($secMeetings as $key => $value) {
                 if (($key % 3) == 0) { // First of 3 values
-    				$name = $value;
-    			} else if (($key % 3) == 1) { // Second of 3 values
-    				$role = $value;
-    			}  else if (($key % 3) == 2) { // Third and last of 3 values
-    				$auth = $value;
+                    $name = $value;
+                } else if (($key % 3) == 1) { // Second of 3 values
+                    $role = $value;
+                }  else if (($key % 3) == 2) { // Third and last of 3 values
+                    $auth = $value;
 
-    				// We have all values now, add them to the return array:
-    				$contributors[$role][] = [
+                    // We have all values now, add them to the return array:
+                    $contributors[$role][] = [
                         'entity' => 'meeting',
                         'name' => $name,
                         'role' => $role,
                         'auth' => $auth,
                         'primary' => false
                     ];
-    			}
+                }
             }
         }
 
@@ -405,4 +401,54 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         }
         return $authors2;
     }
+    
+    
+    /**
+     * AK: Get names of all contributor
+     * https://redmine.acdh.oeaw.ac.at/issues/19499 
+     * TODO: Fallback to MarcXML
+     *
+     * @return array
+     */
+    public function getContributorsForSearchListView(): array {
+        // Primary authors
+        $primPers = isset($this->fields['author']) ? (array)$this->fields['author'] : [];
+        $primRole = isset($this->fields['author_role']) ? (array)$this->fields['author_role'] : [];
+        $primCorpRole = isset($this->fields['author_corporate_role']) ? (array)$this->fields['author_corporate_role'] : [];
+        
+        $primCorp = isset($this->fields['author_corporate']) ? (array)$this->fields['author_corporate'] : [];
+        $primMeet = isset($this->fields['author_meeting_txt']) ? (array)$this->fields['author_meeting_txt'] : [];
+        // Secondary authors
+        $secPers = isset($this->fields['author2']) ? (array)$this->fields['author2'] : [];
+        $secRole = isset($this->fields['author2_role']) ? (array)$this->fields['author2_role_role'] : [];
+        $secCorp = isset($this->fields['author2_corporate_txt_mv']) ? (array)$this->fields['author2_corporate_txt_mv'] : [];
+        $secMeet = isset($this->fields['author2_meeting_txt_mv']) ? (array)$this->fields['author2_meeting_txt_mv'] : [];
+        
+        $authorsCorp = $this->mergeAuthorsAndRoles($primCorp, $primCorpRole);
+        $authors = $this->mergeAuthorsAndRoles($primPers, $primRole);
+        $authors2 = $this->mergeAuthorsAndRoles($secPers, $secRole);
+        // Merge array
+        $merged = array_merge($authors, $authorsCorp, $primMeet, $authors2, $secCorp,
+            $secMeet);
+            
+        // Return merged array
+        return $merged;
+    }
+    
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/19499
+     * @param type $names
+     * @param type $roles
+     * @return array
+     */
+    private function mergeAuthorsAndRoles($names, $roles): array {
+        $authors = array();
+        foreach ($names as $key1 => $value1) {
+          // store IP
+          $authors[$key1] = $value1.' ['.$roles[$key1].']';
+        }
+        return $authors;
+    }
+    
+    
 }
