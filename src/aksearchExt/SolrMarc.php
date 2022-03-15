@@ -260,9 +260,14 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $auth = null;
  
         // Get primary author
-        $primaryName = $this->fields['author'][0] ?? null;
-        $primaryRole = $this->fields['author_role'][0] ?? null;
+        $primaryName = $this->fields['author'] ?? null;
+        $primaryRole = $this->fields['author_role'] ?? null;
         $primaryAuth = $this->fields['author_GndNo_str'] ?? null;
+        
+        $authors = array();
+        if($primaryName !== null) {
+            $authors = $this->createSecondaryAuthors($primaryName, $primaryRole);
+        }
         
         // Get primary corporate author
         $corpName = $this->fields['author_corporate'][0] ?? null;
@@ -276,27 +281,17 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         // Get secondary authors
         $secNames = $this->fields['author2'] ?? null;
-        $secRole = $this->fields['author2_role'] ?? null;
+        $secRole = $this->fields['author2_role'] ?? null;        
         $authors2 = array();
         if($secNames !== null) {
             $authors2 = $this->createSecondaryAuthors($secNames, $secRole);
         }
+        
         // Get secondary corporate authors
         $secCorps = $this->fields['author2_corporate_NameRoleGnd_str_mv'] ?? null;
 
         // Get secondary meeting authors
         $secMeetings = $this->fields['author2_meeting_NameRoleGnd_str_mv'] ?? null;
-
-        // Add primary person authors to array (values from Marc21 field 100)
-        if ($primaryName) {
-            $contributors[$primaryRole][] = [
-                'entity' => 'person',
-                'name' => $primaryName,
-                'role' => $primaryRole,
-                'auth' => $primaryAuth,
-                'primary' => true
-            ];
-        }
 
         // Add primary corporation authors to array (values from Marc21 field 110)
         if ($corpName) {
@@ -318,6 +313,23 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 'auth' => $meetingAuth,
                 'primary' => true
             ];
+        }
+        // Add primary person authors to array (values from Marc21 field 700)
+        if ($authors) {
+            $basicRole = $authors[0]['role'];
+            foreach ($authors as $value) {
+                if(!isset($value['role'])) {
+                    $value['role'] = $basicRole;
+                }
+                // We have all values now, add them to the return array:
+                $contributors[$value['role']][] = [
+                    'entity' => 'person',
+                    'name' => $value['name'],
+                    'role' => $value['role'],
+                    'auth' => null,
+                    'primary' => false
+                ];
+            }
         }
         
         // Add secondary person authors to array (values from Marc21 field 700)
@@ -420,7 +432,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $primMeet = isset($this->fields['author_meeting_txt']) ? (array)$this->fields['author_meeting_txt'] : [];
         // Secondary authors
         $secPers = isset($this->fields['author2']) ? (array)$this->fields['author2'] : [];
-        $secRole = isset($this->fields['author2_role']) ? (array)$this->fields['author2_role_role'] : [];
+        $secRole = isset($this->fields['author2_role']) ? (array)$this->fields['author2_role'] : [];
         $secCorp = isset($this->fields['author2_corporate_txt_mv']) ? (array)$this->fields['author2_corporate_txt_mv'] : [];
         $secMeet = isset($this->fields['author2_meeting_txt_mv']) ? (array)$this->fields['author2_meeting_txt_mv'] : [];
         
