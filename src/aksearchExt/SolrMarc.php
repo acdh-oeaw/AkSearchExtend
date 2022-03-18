@@ -114,48 +114,45 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $lkrValue = 'LKR/ITM-OeAW';
         $marc     = $this->getMarcRecord();
 
+        // get holdings
+        $results = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
+
         $f970a = $this->getMarcField($marc, 970, 7, null, 'a');
         $f773w = $this->getMarcField($marc, 773, 1, 8, 'w');
         $f773g = $this->getMarcField($marc, 773, 1, 8, 'g');
-        
         if ($f970a === $lkrValue && !empty($f773w) && !empty($f773g)) {
             $ctrlnum = preg_replace('/^.*[)]/', '', $f773w);
             $param   = new ParamBag(['fl' => 'id']);
             $record  = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, $param)->first();
             if ($record !== null) {
-                $id      = $record->getRawData()['id'];
+                $lkrId      = $record->getRawData()['id'];
                 $barcode = preg_replace('/^.*:/', '', $f773g);
-            }
-            //print_r([$id, $barcode]);
-        }
+                //print_r([$lkrid, $barcode]);
 
-        // get holdings
-        $results = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
-       
-        // if record is an LKR, remove items not matching the barcode
-        if (!empty($barcode)) {
-            $holdings            = $results['holdings'];
-            $results['holdings'] = [];
-            foreach ($holdings as $key => $location) {
-                $items             = $location['items'];
-                $location['items'] = [];
-                foreach ($items as $item) {
-                    if ($item['barcode'] === $barcode || $item['enumeration_a'] === $barcode) {
-                        $location['items'][] = $item;
+                $lkrResults = $this->holdLogic->getHoldings($lkrId, $this->tryMethod('getConsortialIDs'));
+                // add only items matching the barcode/enumeration_a
+                foreach ($lkrResults['holdings'] as $key => $location) {
+                    $items             = $location['items'];
+                    $location['items'] = [];
+                    foreach ($items as $item) {
+                        if ($item['barcode'] === $barcode || $item['enumeration_a'] === $barcode) {
+                            $location['items'][] = $item;
+                        }
+                    }
+                    if (count($location['items']) > 0) {
+                        $results['holdings'][$key] = $location;
                     }
                 }
-                if (count($location['items']) > 0) {
-                    $results['holdings'][$key] = $location;
-                }
+
             }
         }
-        
+
         $this->getHolding991992Data($marc, $results['holdings']);
-      
+
         if(isset($results['electronic_holdings'])) {
             $results['electronic_holdings'] = $this->checkElectronicHoldings($results['electronic_holdings'], $marc);
         }
-        
+
         return $results;
     }
     
