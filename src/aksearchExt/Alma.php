@@ -157,4 +157,75 @@ class Alma extends \VuFind\ILS\Driver\Alma {
 
         return $results;
     }
+     /**
+     * Parse a date.
+     *
+     * @param string  $date     Date to parse
+     * @param boolean $withTime Add time to return if available?
+     *
+     * @return string
+     */
+    public function parseDate($date, $withTime = false)
+    {
+        // Remove trailing Z from end of date
+        // e.g. from Alma we get dates like 2012-07-13Z without time, which is wrong)
+        if (strpos($date, 'T') === false && substr($date, -1) === 'Z') {
+            $date = substr($date, 0, -1);
+        }
+
+        $compactDate = "/^[0-9]{8}$/"; // e. g. 20120725
+        $euroName = "/^[0-9]+\/[A-Za-z]{3}\/[0-9]{4}$/"; // e. g. 13/jan/2012
+        $euro = "/^[0-9]+\/[0-9]+\/[0-9]{4}$/"; // e. g. 13/7/2012
+        $euroPad = "/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{2,4}$/"; // e. g. 13/07/2012
+        $datestamp = "/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/"; // e. g. 2012-07-13
+        $timestamp = "/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/";
+        $timestampMs
+            = "/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z$/";
+        // e. g. 2017-07-09T18:00:00
+
+        if ($date == null || $date == '') {
+            return '';
+        } elseif (preg_match($compactDate, $date) === 1) {
+            return $this->dateConverter->convertToDisplayDate('Ynd', $date);
+        } elseif (preg_match($euroName, $date) === 1) {
+            return $this->dateConverter->convertToDisplayDate('d/M/Y', $date);
+        } elseif (preg_match($euro, $date) === 1) {
+            return $this->dateConverter->convertToDisplayDate('d/m/Y', $date);
+        } elseif (preg_match($euroPad, $date) === 1) {
+            return $this->dateConverter->convertToDisplayDate('d/m/y', $date);
+        } elseif (preg_match($datestamp, $date) === 1) {
+            return $this->dateConverter->convertToDisplayDate('Y-m-d', $date);
+        } elseif (preg_match($timestamp, $date) === 1) {
+            if ($withTime) {
+                $timestamp = new \DateTimeImmutable($date);
+                return $timestamp->format('Y-m-d H:i:s');
+                /*
+                return $this->dateConverter->convertToDisplayDateAndTime(
+                    'Y-m-d\TH:i:sT',
+                    $date
+                );*/
+            } else {
+                return $this->dateConverter->convertToDisplayDate(
+                    'Y-m-d',
+                    substr($date, 0, 10)
+                );
+            }
+        } elseif (preg_match($timestampMs, $date) === 1) {
+            if ($withTime) {
+                return $this->dateConverter->convertToDisplayDateAndTime(
+                    'Y-m-d\TH:i:s#???T',
+                    $date
+                );
+            } else {
+                return $this->dateConverter->convertToDisplayDate(
+                    'Y-m-d',
+                    substr($date, 0, 10)
+                );
+            }
+        } else {
+            throw new \Exception("Invalid date: $date");
+        }
+    }
+
+   
 }
