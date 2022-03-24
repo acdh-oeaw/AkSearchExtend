@@ -29,14 +29,7 @@ namespace aksearchExt;
 class Alma extends \VuFind\ILS\Driver\Alma {
 
     /**
-     * Assures all holding data provided by the Alma REST API are returned.
-     * 
-     * Unfortunately there's no other way to do it than to override the whole
-     * getHolding() method by copy-pasting the original implementation and 
-     * changing only few lines in it.
-     * 
-     * https://redmine.acdh.oeaw.ac.at/issues/19566
-     * https://redmine.acdh.oeaw.ac.at/issues/14550
+     * See docs/holdings.md
      * 
      * @param type $id
      * @param type $patron
@@ -89,52 +82,54 @@ class Alma extends \VuFind\ILS\Driver\Alma {
                 }
 
                 $itemNotes = !empty($item->item_data->public_note) ? [(string) $item->item_data->public_note] : null;
-            }
 
-            $itemNotes = !empty($item->item_data->public_note) ? [(string) $item->item_data->public_note] : null;
+                $processType = (string) ($item->item_data->process_type ?? '');
+                if ($processType && 'LOAN' !== $processType) {
+                    $status = $this->getTranslatableStatusString(
+                        $item->item_data->process_type
+                    );
+                }
 
-            $processType = (string) ($item->item_data->process_type ?? '');
-            if ($processType && 'LOAN' !== $processType) {
-                $status = $this->getTranslatableStatusString(
-                    $item->item_data->process_type
-                );
-            }
+                $description = null;
+                if (!empty($item->item_data->description)) {
+                    $number      = (string) $item->item_data->description;
+                    $description = (string) $item->item_data->description;
+                }
 
-            $description = null;
-            if (!empty($item->item_data->description)) {
-                $number      = (string) $item->item_data->description;
-                $description = (string) $item->item_data->description;
+                // merge fields manually created by original VuFind code with all
+                // item.item_data fields provided by the Alma REST API
+                $data    = [
+                    'id'           => $id,
+                    'source'       => 'Solr',
+                    'availability' => $this->getAvailabilityFromItem($item),
+                    'status'       => $status,
+                    'location'     => $this->getItemLocation($item),
+                    'reserve'      => 'N', // TODO: support reserve status
+                    'callnumber'   => $this->getTranslatableString(
+                        $item->holding_data->call_number
+                    ),
+                    'duedate'      => $duedate,
+                    'returnDate'   => false, // TODO: support recent returns
+                    'number'       => $number,
+                    'barcode'      => empty($barcode) ? 'n/a' : $barcode,
+                    'item_notes'   => $itemNotes ?? null,
+                    'item_id'      => $itemId,
+                    'holding_id'   => $holdingId,
+                    'holdtype'     => 'auto',
+                    'addLink'      => $patron ? 'check' : false,
+                    // For Alma title-level hold requests
+                    'description'  => $description ?? null
+                ];
+                $rawData = [];
+                foreach ((array) $item->item_data as $k => $v) {
+                    if ($item->item_data->$k instanceof \SimpleXMLElement) {
+                        $rawData[$k] = (string) ($item->item_data->$k->attributes()['desc'] ?? $v);
+                    } else {
+                        $rawData[$k] = $v;
+                    }
+                }
+                $results['holdings'][] = array_merge($rawData, $data);
             }
-
-            // aksearchExt-specific code - merge the VuFind fields with all the
-            // holding data provided by the Alma REST API
-            $data    = [
-                'id'           => $id,
-                'source'       => 'Solr',
-                'availability' => $this->getAvailabilityFromItem($item),
-                'status'       => $status,
-                'location'     => $this->getItemLocation($item),
-                'reserve'      => 'N', // TODO: support reserve status
-                'callnumber'   => $this->getTranslatableString(
-                    $item->holding_data->call_number
-                ),
-                'duedate'      => $duedate,
-                'returnDate'   => false, // TODO: support recent returns
-                'number'       => $number,
-                'barcode'      => empty($barcode) ? 'n/a' : $barcode,
-                'item_notes'   => $itemNotes ?? null,
-                'item_id'      => $itemId,
-                'holding_id'   => $holdingId,
-                'holdtype'     => 'auto',
-                'addLink'      => $patron ? 'check' : false,
-                // For Alma title-level hold requests
-                'description'  => $description ?? null
-            ];
-            $rawData = [];
-            foreach ((array) $item->item_data as $k => $v) {
-                $rawData[$k] = (string) $v;
-            }
-            $results['holdings'][] = array_merge($rawData, $data);
         }
 
         // Fetch also digital and/or electronic inventory if configured
