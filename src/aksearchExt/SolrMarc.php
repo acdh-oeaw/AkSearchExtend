@@ -206,7 +206,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @param type $marc
      * @param type $data
      */
-    private function getHolding991992Data($marc, &$data) {
+    private function getHolding991992Data($marc, array &$data) {
         //Exemplarbeschreibung
         $keys992 = array('8', 'b', 'c', 'd', 'e', 'f', 'k', 'l', 'm', 'p', 'q', 'r',
             's');
@@ -214,25 +214,25 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $keys991 = array('8', 'a', 'b', 'c', 'd', 'f', 'i', 'j', 'k', 'l', 'm', 't');
 
         foreach ($data as $k => $v) {
-            if (isset($v['items'])) {
-                foreach ($v['items'] as $ik => $iv) {
-                    $data[$k]['items'][$ik]['exLibris']             = $this->getFieldsByKeysAndField($marc, $keys991, '991');
-                    $data[$k]['items'][$ik]['exemplarbeschreibung'] = $this->getFieldsByKeysAndField($marc, $keys992, '992');
-                }
+            foreach (($v['items'] ?? []) as &$item) {
+                $item['exLibris']             = $this->getFieldsByKeysAndField($marc, $keys991, '991');
+                $item['exemplarbeschreibung'] = $this->getFieldsByKeysAndField($marc, $keys992, '992');
             }
+            unset($item);
         }
     }
 
-    private function getFieldsByKeysAndField($marc, $keys, $field) {
-        $str = "";
+    private function getFieldsByKeysAndField($marc, $keys, $field): array {
+        $values = [];
         foreach ($this->getMarcFieldsAsObject($marc, $field, null, null) as $field) {
             foreach ($keys as $k) {
+                $values[$k] = [];
                 if (!empty($field->$k)) {
-                    $str .= $v . ';<br>';
+                    $values[$k][] = $field->$k . ';<br>';
                 }
             }
         }
-        return $str;
+        return $values;
     }
 
     /**
