@@ -213,12 +213,13 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         //exLibris
         $keys991 = array('8', 'a', 'b', 'c', 'd', 'f', 'i', 'j', 'k', 'l', 'm', 't');
 
-        foreach ($data as $k => $v) {
-            foreach (($v['items'] ?? []) as &$item) {
-                $item['exLibris']             = $this->getFieldsByKeysAndField($marc, $keys991, '991');
-                $item['exemplarbeschreibung'] = $this->getFieldsByKeysAndField($marc, $keys992, '992');
+        foreach ($data as &$v) {
+            if (isset($v['items'])) {
+                foreach ($v['items'] as &$iv) {
+                    $iv['exLibris']             = $this->getFieldsByKeysAndField($marc, $keys991, '991');
+                    $iv['exemplarbeschreibung'] = $this->getFieldsByKeysAndField($marc, $keys992, '992');
+                }
             }
-            unset($item);
         }
     }
 
