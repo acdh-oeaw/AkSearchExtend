@@ -111,7 +111,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         //     https://redmine.acdh.oeaw.ac.at/issues/14550
         //     https://redmine.acdh.oeaw.ac.at/issues/19566
         $marc       = $this->getMarcRecord();
-        $lkrRecords = $this->getMarcFieldsAsObject($marc, 773, 1, 8);
+        $lkrRecords = $this->getMarcFieldsAsObject($marc, 773, 1, 8, ['w']);
         foreach ($lkrRecords as $lkrRecord) {
             if (empty($lkrRecord->w) || empty($lkrRecord->g)) {
                 continue;
@@ -119,26 +119,36 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             $ctrlnum = preg_replace('/^.*[)]/', '', $lkrRecord->w);
             $param   = new ParamBag(['fl' => 'id']);
             $record  = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, $param)->first();
+            //print_r(['LKR1', $ctrlnum, (int)is_object($record)]);
             if ($record !== null) {
                 $lkrId      = $record->getRawData()['id'];
+                // $matchValue is an array (!) as there might be many subfield g values
+                // for now we optimistically assume the prefix (which we skip using preg_replace())
+                // doesn't count
                 $matchValue = preg_replace('/^.*:/', '', $lkrRecord->g);
-                //print_r([$lkrId, $matchValue]);
+                //print_r(['LKR2', $lkrId, $matchValue]);
                 $lkrResults = $this->holdLogic->getHoldings($lkrId, $this->tryMethod('getConsortialIDs'));
                 // add only items matching the barcode/enumeration_a
                 foreach ($lkrResults['holdings'] as $location => $holding) {
                     $items            = $holding['items'];
                     $holding['items'] = [];
                     foreach ($items as $item) {
-                        if (in_array($matchValue, [$item['barcode'], $item['enumeration_a'],
-                                $item['enumeration_b']])) {
+                        $itemValues = [$item['barcode'], $item['enumeration_a'], $item['enumeration_b']];
+                        if (count(array_intersect($matchValue, $itemValues)) > 0) {
+                            //print_r($item);
                             $holding['items'][] = $item;
                         }
                     }
                     if (count($holding['items']) > 0) {
-                        $results['holdings'][$location] = array_merge(
-                            $results['holdings'][$location] ?? [],
-                            $holding
-                        );
+                        // join with normal items
+                        if (!isset($results['holdings'][$location])) {
+                            $results['holdings'][$location] = $holding;
+                        } else {
+                            $results['holdings'][$location]['items'] = array_merge(
+                                $results['holdings'][$location]['items'],
+                                $holding['items']
+                            );
+                        }
                     }
                 }
             }
@@ -261,8 +271,17 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             }
             $fieldData = new \stdClass();
             foreach ($i->getSubfields() as $subfield => $value) {
-                $fieldData->$subfield = $value->getData();
+                if (!isset($fieldData->$subfield)) {
+                    $fieldData->$subfield = [];
+                }
+                $fieldData->$subfield[] = $value->getData();
             }
+            foreach ($fieldData as $k => &$v) {
+                if (count($v) === 1 && ($singleValueAsLiteral === true || is_array($singleValueAsLiteral) && in_array($k, $singleValueAsLiteral))) {
+                    $v = $v[0];
+                }
+            }
+            unset($v);
             $fields[] = $fieldData;
         }
         return $fields;
