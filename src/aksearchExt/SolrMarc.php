@@ -114,44 +114,40 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $results = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
 
         // <-- LKR
-        $lkrValue = 'LKR/ITM-OeAW';
-        $marc     = $this->getMarcRecord();
-        $f970a = $this->getMarcFields($marc, 970, 7, null, 'a');
-        $f773w = $this->getMarcFields($marc, 773, 1, 8, 'w');
-        $f773g = $this->getMarcFields($marc, 773, 1, 8, 'g');
-        //print_r([$f970a, $f773w, $f773g]);
-        if (in_array($lkrValue, $f970a) && count($f773w) > 0 && count($f773g) === count($f773w)) {
-            foreach ($f773w as $n => $ctrlnum) {
-                $ctrlnum = preg_replace('/^.*[)]/', '', $ctrlnum);
-                $param   = new ParamBag(['fl' => 'id']);
-                $record  = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, $param)->first();
-                if ($record !== null) {
-                    $lkrId   = $record->getRawData()['id'];
-                    $barcode = preg_replace('/^.*:/', '', $f773g[$n]);
-                    //print_r([$lkrId, $barcode]);
-
-                    $lkrResults = $this->holdLogic->getHoldings($lkrId, $this->tryMethod('getConsortialIDs'));
-                    // add only items matching the barcode/enumeration_a
-                    foreach ($lkrResults['holdings'] as $location => $holding) {
-                        $items             = $holding['items'];
-                        $holding['items'] = [];
-                        foreach ($items as $item) {
-                            if ($item['barcode'] === $barcode || $item['enumeration_a'] === $barcode || $item['enumeration_b'] === $barcode) {
-                                $holding['items'][] = $item;
-                            }
+        $marc       = $this->getMarcRecord();
+        $lkrRecords = $this->getMarcFieldsAsObject($marc, 773, 1, 8);
+        foreach ($lkrRecords as $lkrRecord) {
+            if (empty($lkrRecord->w) || empty($lkrRecord->g)) {
+                continue;
+            }
+            $ctrlnum = preg_replace('/^.*[)]/', '', $lkrRecord->w);
+            $param   = new ParamBag(['fl' => 'id']);
+            $record  = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, $param)->first();
+            if ($record !== null) {
+                $lkrId      = $record->getRawData()['id'];
+                $matchValue = preg_replace('/^.*:/', '', $lkrRecord->g);
+                //print_r([$lkrId, $matchValue]);
+                $lkrResults = $this->holdLogic->getHoldings($lkrId, $this->tryMethod('getConsortialIDs'));
+                // add only items matching the barcode/enumeration_a
+                foreach ($lkrResults['holdings'] as $location => $holding) {
+                    $items            = $holding['items'];
+                    $holding['items'] = [];
+                    foreach ($items as $item) {
+                        if (in_array($matchValue, [$item['barcode'], $item['enumeration_a'],
+                                $item['enumeration_b']])) {
+                            $holding['items'][] = $item;
                         }
-                        if (count($holding['items']) > 0) {
-                            $results['holdings'][$location] = array_merge(
-                                $results['holdings'][$location] ?? [],
-                                $holding
-                            );
-                        }
+                    }
+                    if (count($holding['items']) > 0) {
+                        $results['holdings'][$location] = array_merge(
+                            $results['holdings'][$location] ?? [],
+                            $holding
+                        );
                     }
                 }
             }
         }
         //--> LKR
-
         //$this->getHolding991992Data($marc, $results['holdings']);
 
         if (isset($results['electronic_holdings'])) {
@@ -160,7 +156,6 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         return $results;
     }
-
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/19506
      * commented out due to https://redmine.acdh.oeaw.ac.at/issues/14550#note-40
@@ -170,72 +165,75 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @param type $marc
      * @param type $data
      *
-    private function getHolding991992Data($marc, &$data) {
-        //Exemplarbeschreibung
-        $keys992 = array('8', 'b', 'c', 'd', 'e', 'f', 'k', 'l', 'm', 'p', 'q', 'r',
-            's');
-        //exLibris
-        $keys991 = array('8', 'a', 'b', 'c', 'd', 'f', 'i', 'j', 'k', 'l', 'm', 't');
+      private function getHolding991992Data($marc, &$data) {
+      //Exemplarbeschreibung
+      $keys992 = array('8', 'b', 'c', 'd', 'e', 'f', 'k', 'l', 'm', 'p', 'q', 'r',
+      's');
+      //exLibris
+      $keys991 = array('8', 'a', 'b', 'c', 'd', 'f', 'i', 'j', 'k', 'l', 'm', 't');
 
-        foreach ($data as $k => $v) {
-            if (isset($v['items'])) {
-                foreach ($v['items'] as $ik => $iv) {
-                    $data[$k]['items'][$ik]['exLibris']             = $this->getFieldsByKeysAndField($marc, $keys991, '991');
-                    $data[$k]['items'][$ik]['exemplarbeschreibung'] = $this->getFieldsByKeysAndField($marc, $keys992, '992');
-                }
-            }
-        }
-    }
+      foreach ($data as $k => $v) {
+      if (isset($v['items'])) {
+      foreach ($v['items'] as $ik => $iv) {
+      $data[$k]['items'][$ik]['exLibris']             = $this->getFieldsByKeysAndField($marc, $keys991, '991');
+      $data[$k]['items'][$ik]['exemplarbeschreibung'] = $this->getFieldsByKeysAndField($marc, $keys992, '992');
+      }
+      }
+      }
+      }
      */
-
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/19506
      * @param type $marc
      * @param type $keys
      * @param type $field
      * @return string
+     *
+      private function getFieldsByKeysAndField($marc, $keys, $field) {
+      $str = "";
+      foreach ($this->getMarcFieldsAsObject($marc, $field, null, null) as $field) {
+      foreach ($keys as $k) {
+      if (!empty($field->$k)) {
+      $str .= $v . ';<br>';
+      }
+      }
+      }
+      return $str;
+      }
      */
-    private function getFieldsByKeysAndField($marc, $keys, $field) {
-        $str = "";
-        foreach ($keys as $k) {
-            if ($this->getMarcField($marc, $field, null, null, $k) !== null && !empty($this->getMarcField($marc, $field, null, null, $k))) {
-                $str .= $this->getMarcField($marc, $field, null, null, $k) . ';<br>';
-            }
-        }
-        return $str;
-    }
 
-    private function getMarcField($marc, $field, $ind1 = null, $ind2 = null,
-                                  $subfield = null) {
-        $values = $this->getMarcFields($marc, $field, $ind1, $ind2, $subfield);
-        switch (count($values)) {
-            case 0:
-                return null;
-            case 1:
-                return $values[0];
-            default:
-                throw new \RuntimeException("More than one matching field ${field}_" . ($ind1 ?? '#') . ($ind2 ?? '#'));
-        }
-    }
-
-    private function getMarcFields($marc, $field, $ind1 = null, $ind2 = null,
-                                  $subfield = null) {
-        $values = [];
+    /**
+     * Fetches all values of a given MARC field (optionally fullfilling given
+     * indicator 1/2 filters) as an array of objects (with subfields mapped to
+     * object properties). 
+     * 
+     * Remark - in case of the same subfield repeated within a single MARC field
+     * (don't know if it's possible or not) the last subfield value is used.
+     * 
+     * @param type $marc
+     * @param type $field
+     * @param type $ind1
+     * @param type $ind2
+     * @param type $singleValueAsLiteral
+     * @return array
+     */
+    private function getMarcFieldsAsObject($marc, $field, $ind1 = null,
+                                           $ind2 = null,
+                                           $singleValueAsLiteral = true): array {
+        $fields = [];
         foreach ($marc->getFields($field) as $i) {
             if ($i instanceof File_MARC_Data_Field && (!empty($ind1) && intval($i->getIndicator(1)) !== $ind1 || !empty($ind2) && intval($i->getIndicator(2)) !== $ind2)) {
                 continue;
             }
-            if ($subfield === null) {
-                $values[] = $i->getData();
-            } else {
-                foreach ($i->getSubfields($subfield) as $j) {
-                    $values[] = $j->getData();
-                }
+            $fieldData = new \stdClass();
+            foreach ($i->getSubfields() as $subfield => $value) {
+                $fieldData->$subfield = $value;
             }
+            $fields[] = $fieldData;
         }
-        return $values;
+        return $fields;
     }
-    
+
     /**
      * Add the E-media Link for the electronic holdings  
      * https://redmine.acdh.oeaw.ac.at/issues/19474
@@ -245,9 +243,15 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @return array
      */
     private function checkElectronicHoldings(array $eh, $marc): array {
-        foreach ($eh as $k => $v) {
-            $electronic = $this->getMarcField($marc, 'AVE', null, null, 'x');
-            if (!empty($electronic)) {
+        $electronic = null;
+        foreach ($this->getMarcFieldsAsObject($marc, 'AVE', null, null) as $ave) {
+            if (!empty($ave->x)) {
+                $electronic = $ave->x;
+                break;
+            }
+        }
+        if (!empty($electronic)) {
+            foreach ($eh as $k => $v) {
                 $eh[$k]['e_url'] = $electronic;
             }
         }
@@ -436,33 +440,22 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      */
     public function getContributorsForSearchListView(): array {
         // Primary authors
-        $primPers     = isset($this->fields['author']) ? (array) $this->fields['author'] : [
-];
-        $primRole     = isset($this->fields['author_role']) ? (array) $this->fields['author_role'] : [
-];
-        $primCorpRole = isset($this->fields['author_corporate_role']) ? (array) $this->fields['author_corporate_role'] : [
-];
-
-        $primCorp = isset($this->fields['author_corporate']) ? (array) $this->fields['author_corporate'] : [
-];
-        $primMeet = isset($this->fields['author_meeting_txt']) ? (array) $this->fields['author_meeting_txt'] : [
-];
+        $primPers     = (array) ($this->fields['author'] ?? []);
+        $primRole     = (array) ($this->fields['author_role'] ?? []);
+        $primCorpRole = (array) ($this->fields['author_corporate_role'] ?? []);
+        $primCorp     = (array) ($this->fields['author_corporate'] ?? []);
+        $primMeet     = (array) ($this->fields['author_meeting_txt'] ?? []);
         // Secondary authors
-        $secPers  = isset($this->fields['author2']) ? (array) $this->fields['author2'] : [
-];
-        $secRole  = isset($this->fields['author2_role']) ? (array) $this->fields['author2_role'] : [
-];
-        $secCorp  = isset($this->fields['author2_corporate_txt_mv']) ? (array) $this->fields['author2_corporate_txt_mv'] : [
-];
-        $secMeet  = isset($this->fields['author2_meeting_txt_mv']) ? (array) $this->fields['author2_meeting_txt_mv'] : [
-];
+        $secPers      = (array) ($this->fields['author2'] ?? []);
+        $secRole      = (array) ($this->fields['author2_role'] ?? []);
+        $secCorp      = (array) ($this->fields['author2_corporate_txt_mv'] ?? []);
+        $secMeet      = (array) ($this->fields['author2_meeting_txt_mv'] ?? []);
 
         $authorsCorp = $this->mergeAuthorsAndRoles($primCorp, $primCorpRole);
         $authors     = $this->mergeAuthorsAndRoles($primPers, $primRole);
         $authors2    = $this->mergeAuthorsAndRoles($secPers, $secRole);
         // Merge array
-        $merged      = array_merge($authors, $authorsCorp, $primMeet, $authors2, $secCorp,
-                                   $secMeet);
+        $merged      = array_merge($authors, $authorsCorp, $primMeet, $authors2, $secCorp, $secMeet);
 
         // Return merged array
         return $merged;
