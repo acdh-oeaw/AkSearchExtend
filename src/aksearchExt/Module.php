@@ -13,10 +13,10 @@ class Module {
             'vufind' => [
                 'plugin_managers' => [
                     'recorddriver' => [
-                        'factories'  => [
+                        'factories' => [
                             'aksearchExt\SolrMarc' => 'VuFind\RecordDriver\SolrDefaultFactory'
                         ],
-                        'aliases'    => [
+                        'aliases' => [
                             'VuFind\RecordDriver\SolrMarc' => 'aksearchExt\SolrMarc'
                         ],
                         'delegators' => [
@@ -25,16 +25,25 @@ class Module {
                             ]
                         ]
                     ],
-                    'ils_driver'   => [
+                    'ils_driver' => [
                         'factories' => [
                             'aksearchExt\Alma' => 'VuFind\ILS\Driver\AlmaFactory'
                         ],
-                        'aliases'   => [
+                        'aliases' => [
                             'VuFind\ILS\Driver\Alma' => 'aksearchExt\Alma'
+                        ]
+                    ],
+                    'recordtab' => [
+                        'factories' => [
+                            'aksearchExt\RecordTab\Exemplarspezifika' => 'VuFind\RecordTab\HoldingsILSFactory',
+                        ],
+                        'aliases' => [
+                            'exemplarspezifika' => 'aksearchExt\RecordTab\Exemplarspezifika'
                         ]
                     ],
                 ],
             ],
         ];
     }
+
 }

@@ -152,8 +152,6 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         }
         //--> LKR
 
-        //$this->getHolding991992Data($marc, $results['holdings']);
-
         if (isset($results['electronic_holdings'])) {
             $results['electronic_holdings'] = $this->checkElectronicHoldings($results['electronic_holdings'], $marc);
         }
@@ -167,27 +165,61 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * followed by https://redmine.acdh.oeaw.ac.at/issues/19506#note-10
      * 
      * Display Exemplarbeschreibung and Ex Libris data on the holdingss tab
+     */
+    public function getHolding991992() {
+        $id = $this->getUniqueID();
+        $marc     = $this->getMarcRecord();
+        // get holdings
+        $results = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
+        $this->getHolding991992Data($marc, $results['holdings']);
+        return $this->formatHolding991992Data($results['holdings']);
+    }
+    
+    private function formatHolding991992Data(array $data): array {
+        
+        $exemplerdata = array();
+        foreach($data as $name => $holding) {
+
+
+            if(isset($holding['items'])) {
+                //$exemplerdata[$name];
+                foreach($holding['items'] as $item) {
+                    if($item['exemplarbeschreibung']) {
+                        $exemplerdata[$name]['exemplarbeschreibung'] = $item['exemplarbeschreibung'];
+                    }
+
+                    if($item['exLibris']) {
+                        $exemplerdata[$name]['exLibris'] = $item['exLibris'];
+                    }
+                }
+            }
+    
+        }
+        return $exemplerdata;
+    }
+    
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/19506
+     * Display Exemplarbeschreibung and Ex Libris data on the holdinstab
      * @param type $marc
      * @param type $data
-     *
+     */
     private function getHolding991992Data($marc, &$data) {
         //Exemplarbeschreibung
-        $keys992 = array('8', 'b', 'c', 'd', 'e', 'f', 'k', 'l', 'm', 'p', 'q', 'r',
-            's');
+        $keys992 = array('8', 'b', 'c', 'd', 'e', 'f', 'k', 'l', 'm', 'p', 'q', 'r', 's');
         //exLibris
         $keys991 = array('8', 'a', 'b', 'c', 'd', 'f', 'i', 'j', 'k', 'l', 'm', 't');
-
-        foreach ($data as $k => $v) {
-            if (isset($v['items'])) {
-                foreach ($v['items'] as $ik => $iv) {
-                    $data[$k]['items'][$ik]['exLibris']             = $this->getFieldsByKeysAndField($marc, $keys991, '991');
+        
+        foreach($data as $k => $v) {
+            if(isset($v['items'])) {
+                foreach($v['items'] as $ik => $iv) {
+                    $data[$k]['items'][$ik]['exLibris'] = $this->getFieldsByKeysAndField($marc, $keys991, '991');
                     $data[$k]['items'][$ik]['exemplarbeschreibung'] = $this->getFieldsByKeysAndField($marc, $keys992, '992');
                 }
             }
         }
     }
-     */
-
+    
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/19506
      * @param type $marc
@@ -195,14 +227,14 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @param type $field
      * @return string
      */
-    private function getFieldsByKeysAndField($marc, $keys, $field) {
-        $str = "";
-        foreach ($keys as $k) {
-            if ($this->getMarcField($marc, $field, null, null, $k) !== null && !empty($this->getMarcField($marc, $field, null, null, $k))) {
-                $str .= $this->getMarcField($marc, $field, null, null, $k) . ';<br>';
-            }
+    private function getFieldsByKeysAndField($marc, $keys, $field): array {
+        $values = array();
+        foreach($keys as $k) {
+            if($this->getMarcField($marc, $field, null, null, $k) !== null && !empty($this->getMarcField($marc, $field, null, null, $k))) {
+                $values[$k][] = $this->getMarcField($marc, $field, null, null, $k).';<br>';
+            } 
         }
-        return $str;
+        return $values;        
     }
 
     private function getMarcField($marc, $field, $ind1 = null, $ind2 = null,
