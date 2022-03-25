@@ -101,12 +101,6 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         return $this->getMarcRecord()->getField(9)->getData();
     }
 
-    /**
-     * Special implementation of getRealTimeHoldings() taking care of very specific field mappings
-     * 
-     * https://redmine.acdh.oeaw.ac.at/issues/19566
-     * https://redmine.acdh.oeaw.ac.at/issues/14550
-     */
     public function getRealTimeHoldings() {
         $id = $this->getUniqueID();
 
@@ -114,6 +108,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $results = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
 
         // <-- LKR
+        //     https://redmine.acdh.oeaw.ac.at/issues/14550
+        //     https://redmine.acdh.oeaw.ac.at/issues/19566
         $marc       = $this->getMarcRecord();
         $lkrRecords = $this->getMarcFieldsAsObject($marc, 773, 1, 8);
         foreach ($lkrRecords as $lkrRecord) {
@@ -148,59 +144,99 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             }
         }
         //--> LKR
-        //$this->getHolding991992Data($marc, $results['holdings']);
-
+        //<-- E-media Link for the electronic holdings
+        //    https://redmine.acdh.oeaw.ac.at/issues/19474
         if (isset($results['electronic_holdings'])) {
-            $results['electronic_holdings'] = $this->checkElectronicHoldings($results['electronic_holdings'], $marc);
+            $electronic = null;
+            foreach ($this->getMarcFieldsAsObject($marc, 'AVE', null, null) as $ave) {
+                if (!empty($ave->x)) {
+                    $electronic = $ave->x;
+                    break;
+                }
+            }
+            if (!empty($electronic)) {
+                foreach ($results['electronic_holdings'] as &$v) {
+                    $v['e_url'] = $electronic;
+                }
+                unset($v);
+            }
         }
 
         return $results;
     }
+
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/19506
      * commented out due to https://redmine.acdh.oeaw.ac.at/issues/14550#note-40
      * followed by https://redmine.acdh.oeaw.ac.at/issues/19506#note-10
      * 
      * Display Exemplarbeschreibung and Ex Libris data on the holdingss tab
-     * @param type $marc
-     * @param type $data
-     *
-      private function getHolding991992Data($marc, &$data) {
-      //Exemplarbeschreibung
-      $keys992 = array('8', 'b', 'c', 'd', 'e', 'f', 'k', 'l', 'm', 'p', 'q', 'r',
-      's');
-      //exLibris
-      $keys991 = array('8', 'a', 'b', 'c', 'd', 'f', 'i', 'j', 'k', 'l', 'm', 't');
-
-      foreach ($data as $k => $v) {
-      if (isset($v['items'])) {
-      foreach ($v['items'] as $ik => $iv) {
-      $data[$k]['items'][$ik]['exLibris']             = $this->getFieldsByKeysAndField($marc, $keys991, '991');
-      $data[$k]['items'][$ik]['exemplarbeschreibung'] = $this->getFieldsByKeysAndField($marc, $keys992, '992');
-      }
-      }
-      }
-      }
      */
+    public function getHolding991992() {
+        $id      = $this->getUniqueID();
+        $marc    = $this->getMarcRecord();
+        // get holdings
+        $results = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
+        $this->getHolding991992Data($marc, $results['holdings']);
+        return $this->formatHolding991992Data($results['holdings']);
+    }
+
+    private function formatHolding991992Data(array $data): array {
+
+        $exemplerdata = array();
+        foreach ($data as $name => $holding) {
+
+
+            if (isset($holding['items'])) {
+                //$exemplerdata[$name];
+                foreach ($holding['items'] as $item) {
+                    if ($item['exemplarbeschreibung']) {
+                        $exemplerdata[$name]['exemplarbeschreibung'] = $item['exemplarbeschreibung'];
+                    }
+
+                    if ($item['exLibris']) {
+                        $exemplerdata[$name]['exLibris'] = $item['exLibris'];
+                    }
+                }
+            }
+        }
+        return $exemplerdata;
+    }
+
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/19506
+     * Display Exemplarbeschreibung and Ex Libris data on the holdinstab
      * @param type $marc
-     * @param type $keys
-     * @param type $field
-     * @return string
-     *
-      private function getFieldsByKeysAndField($marc, $keys, $field) {
-      $str = "";
-      foreach ($this->getMarcFieldsAsObject($marc, $field, null, null) as $field) {
-      foreach ($keys as $k) {
-      if (!empty($field->$k)) {
-      $str .= $v . ';<br>';
-      }
-      }
-      }
-      return $str;
-      }
+     * @param type $data
      */
+    private function getHolding991992Data($marc, &$data) {
+        //Exemplarbeschreibung
+        $keys992 = array('8', 'b', 'c', 'd', 'e', 'f', 'k', 'l', 'm', 'p', 'q', 'r',
+            's');
+        //exLibris
+        $keys991 = array('8', 'a', 'b', 'c', 'd', 'f', 'i', 'j', 'k', 'l', 'm', 't');
+
+        foreach ($data as $k => $v) {
+            if (isset($v['items'])) {
+                foreach ($v['items'] as $ik => $iv) {
+                    $data[$k]['items'][$ik]['exLibris']             = $this->getFieldsByKeysAndField($marc, $keys991, '991');
+                    $data[$k]['items'][$ik]['exemplarbeschreibung'] = $this->getFieldsByKeysAndField($marc, $keys992, '992');
+                }
+            }
+        }
+    }
+
+    private function getFieldsByKeysAndField($marc, $keys, $field) {
+        $str = "";
+        foreach ($this->getMarcFieldsAsObject($marc, $field, null, null) as $field) {
+            foreach ($keys as $k) {
+                if (!empty($field->$k)) {
+                    $str .= $v . ';<br>';
+                }
+            }
+        }
+        return $str;
+    }
 
     /**
      * Fetches all values of a given MARC field (optionally fullfilling given
@@ -232,30 +268,6 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             $fields[] = $fieldData;
         }
         return $fields;
-    }
-
-    /**
-     * Add the E-media Link for the electronic holdings  
-     * https://redmine.acdh.oeaw.ac.at/issues/19474
-     * 
-     * @param array $eh
-     * @param type $marc
-     * @return array
-     */
-    private function checkElectronicHoldings(array $eh, $marc): array {
-        $electronic = null;
-        foreach ($this->getMarcFieldsAsObject($marc, 'AVE', null, null) as $ave) {
-            if (!empty($ave->x)) {
-                $electronic = $ave->x;
-                break;
-            }
-        }
-        if (!empty($electronic)) {
-            foreach ($eh as $k => $v) {
-                $eh[$k]['e_url'] = $electronic;
-            }
-        }
-        return $eh;
     }
 
     /**
