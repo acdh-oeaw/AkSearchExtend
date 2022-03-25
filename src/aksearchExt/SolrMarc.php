@@ -110,13 +110,12 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     public function getRealTimeHoldings() {
         $id = $this->getUniqueID();
 
-        // check if the record is an LKR one
-        $lkrValue = 'LKR/ITM-OeAW';
-        $marc     = $this->getMarcRecord();
-
-        // get holdings
+        // get normal holdings
         $results = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
 
+        // <-- LKR
+        $lkrValue = 'LKR/ITM-OeAW';
+        $marc     = $this->getMarcRecord();
         $f970a = $this->getMarcField($marc, 970, 7, null, 'a');
         $f773w = $this->getMarcField($marc, 773, 1, 8, 'w');
         $f773g = $this->getMarcField($marc, 773, 1, 8, 'g');
@@ -135,7 +134,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                     $items             = $holding['items'];
                     $holding['items'] = [];
                     foreach ($items as $item) {
-                        if ($item['barcode'] === $barcode || $item['enumeration_a'] === $barcode) {
+                        if ($item['barcode'] === $barcode || $item['enumeration_a'] === $barcode || $item['enumeration_b'] === $barcode) {
                             $holding['items'][] = $item;
                         }
                     }
@@ -148,6 +147,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 }
             }
         }
+        //--> LKR
 
         //$this->getHolding991992Data($marc, $results['holdings']);
 
