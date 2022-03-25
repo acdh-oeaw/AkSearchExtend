@@ -116,33 +116,36 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         // <-- LKR
         $lkrValue = 'LKR/ITM-OeAW';
         $marc     = $this->getMarcRecord();
-        $f970a = $this->getMarcField($marc, 970, 7, null, 'a');
-        $f773w = $this->getMarcField($marc, 773, 1, 8, 'w');
-        $f773g = $this->getMarcField($marc, 773, 1, 8, 'g');
-        if ($f970a === $lkrValue && !empty($f773w) && !empty($f773g)) {
-            $ctrlnum = preg_replace('/^.*[)]/', '', $f773w);
-            $param   = new ParamBag(['fl' => 'id']);
-            $record  = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, $param)->first();
-            if ($record !== null) {
-                $lkrId   = $record->getRawData()['id'];
-                $barcode = preg_replace('/^.*:/', '', $f773g);
-                //print_r([$lkrId, $barcode]);
+        $f970a = $this->getMarcFields($marc, 970, 7, null, 'a');
+        $f773w = $this->getMarcFields($marc, 773, 1, 8, 'w');
+        $f773g = $this->getMarcFields($marc, 773, 1, 8, 'g');
+        //print_r([$f970a, $f773w, $f773g]);
+        if (in_array($lkrValue, $f970a) && count($f773w) > 0 && count($f773g) === count($f773w)) {
+            foreach ($f773w as $n => $ctrlnum) {
+                $ctrlnum = preg_replace('/^.*[)]/', '', $ctrlnum);
+                $param   = new ParamBag(['fl' => 'id']);
+                $record  = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, $param)->first();
+                if ($record !== null) {
+                    $lkrId   = $record->getRawData()['id'];
+                    $barcode = preg_replace('/^.*:/', '', $f773g[$n]);
+                    //print_r([$lkrId, $barcode]);
 
-                $lkrResults = $this->holdLogic->getHoldings($lkrId, $this->tryMethod('getConsortialIDs'));
-                // add only items matching the barcode/enumeration_a
-                foreach ($lkrResults['holdings'] as $location => $holding) {
-                    $items             = $holding['items'];
-                    $holding['items'] = [];
-                    foreach ($items as $item) {
-                        if ($item['barcode'] === $barcode || $item['enumeration_a'] === $barcode || $item['enumeration_b'] === $barcode) {
-                            $holding['items'][] = $item;
+                    $lkrResults = $this->holdLogic->getHoldings($lkrId, $this->tryMethod('getConsortialIDs'));
+                    // add only items matching the barcode/enumeration_a
+                    foreach ($lkrResults['holdings'] as $location => $holding) {
+                        $items             = $holding['items'];
+                        $holding['items'] = [];
+                        foreach ($items as $item) {
+                            if ($item['barcode'] === $barcode || $item['enumeration_a'] === $barcode || $item['enumeration_b'] === $barcode) {
+                                $holding['items'][] = $item;
+                            }
                         }
-                    }
-                    if (count($holding['items']) > 0) {
-                        $results['holdings'][$location] = array_merge(
-                            $results['holdings'][$location] ?? [],
-                            $holding
-                        );
+                        if (count($holding['items']) > 0) {
+                            $results['holdings'][$location] = array_merge(
+                                $results['holdings'][$location] ?? [],
+                                $holding
+                            );
+                        }
                     }
                 }
             }
@@ -204,27 +207,35 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
     private function getMarcField($marc, $field, $ind1 = null, $ind2 = null,
                                   $subfield = null) {
-        $value = null;
+        $values = $this->getMarcFields($marc, $field, $ind1, $ind2, $subfield);
+        switch (count($values)) {
+            case 0:
+                return null;
+            case 1:
+                return $values[0];
+            default:
+                throw new \RuntimeException("More than one matching field ${field}_" . ($ind1 ?? '#') . ($ind2 ?? '#'));
+        }
+    }
+
+    private function getMarcFields($marc, $field, $ind1 = null, $ind2 = null,
+                                  $subfield = null) {
+        $values = [];
         foreach ($marc->getFields($field) as $i) {
             if ($i instanceof File_MARC_Data_Field && (!empty($ind1) && intval($i->getIndicator(1)) !== $ind1 || !empty($ind2) && intval($i->getIndicator(2)) !== $ind2)) {
                 continue;
             }
-            if ($value !== null) {
-                throw new \RuntimeException("More than one matching field");
+            if ($subfield === null) {
+                $values[] = $i->getData();
+            } else {
+                foreach ($i->getSubfields($subfield) as $j) {
+                    $values[] = $j->getData();
+                }
             }
-            $value = $i;
         }
-        if ($value === null) {
-            return null;
-        }
-        if ($subfield === null) {
-            return $value->getData();
-        } else {
-            $value = $value->getSubfield($subfield);
-            return $value ? $value->getData() : null;
-        }
+        return $values;
     }
-
+    
     /**
      * Add the E-media Link for the electronic holdings  
      * https://redmine.acdh.oeaw.ac.at/issues/19474
@@ -411,7 +422,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             // store IP
             $authors2[$key1]['name'] = $value1;
             // store type of cam
-            $authors2[$key1]['role'] = $roles[$key1];
+            $authors2[$key1]['role'] = $roles[$key1] ?? '';
         }
         return $authors2;
     }
