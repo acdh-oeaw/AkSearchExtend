@@ -166,11 +166,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     }
 
     /**
-     * https://redmine.acdh.oeaw.ac.at/issues/19506
-     * commented out due to https://redmine.acdh.oeaw.ac.at/issues/14550#note-40
-     * followed by https://redmine.acdh.oeaw.ac.at/issues/19506#note-10
-     * 
      * Display Exemplarbeschreibung and Ex Libris data on the holdingss tab
+     * https://redmine.acdh.oeaw.ac.at/issues/19506
      */
     public function getHolding991992() {
         $id      = $this->getUniqueID();
@@ -263,7 +260,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             }
             $fieldData = new \stdClass();
             foreach ($i->getSubfields() as $subfield => $value) {
-                $fieldData->$subfield = $value;
+                $fieldData->$subfield = $value->getData();
             }
             $fields[] = $fieldData;
         }
