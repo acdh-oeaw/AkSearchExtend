@@ -122,11 +122,7 @@ class Alma extends \VuFind\ILS\Driver\Alma {
                 ];
                 $rawData = [];
                 foreach ((array) $item->item_data as $k => $v) {
-                    if ($item->item_data->$k instanceof \SimpleXMLElement) {
-                        $rawData[$k] = (string) ($item->item_data->$k->attributes()['desc'] ?? $v);
-                    } else {
-                        $rawData[$k] = $v;
-                    }
+                    $rawData[$k] = (string) $v;
                 }
                 $results['holdings'][] = array_merge($rawData, $data);
             }
