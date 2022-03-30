@@ -50,6 +50,15 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     }
 
     /**
+     * Returns Basisklassifikation
+     * https://redmine.acdh.oeaw.ac.at/issues/19501
+     */
+    public function getClassification() {
+        $values = $this->fields['basiskl_str_mv'] ?? false;
+        return $values ? implode("<br/>", $values) : null;
+    }
+
+    /**
      * Search for URLs in MARC 856 taking URL from subfield u and label from
      * subfields 3 or x
      * 
