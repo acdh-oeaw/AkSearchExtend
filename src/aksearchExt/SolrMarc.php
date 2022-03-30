@@ -37,7 +37,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $urls           = $this->getMarcRecord()->getFields('856');
         foreach ($urls as $urlField) {
             $url = $urlField->getSubfield('u');
-            if ($url === null) {
+            if (!is_object($url)) {
                 continue;
             }
             $url = $url->getData();
