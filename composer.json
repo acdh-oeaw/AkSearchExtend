@@ -17,10 +17,5 @@
         "psr-4": {
             "aksearchExt\\": "src/aksearchExt"
         }
-    },
-    "scripts": {
-        "post-update-cmd": [
-            "cp override/LuceneSyntaxHelper.php \"$VUFIND_HOME/module/VuFindSearch/src/VuFindSearch/Backend/Solr/LuceneSyntaxHelper.php\""
-        ]
     }
 }

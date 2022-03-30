@@ -11,10 +11,10 @@ Can also serve as an example of extending VuFind with your own module being load
 * Additional record view tab (`aksearchExt\RecordTab\Exemplarspezifika`)
 * Tuned version of the `VuFindSearch\Backend\Solr\LuceneSyntaxHelper` class resolving the
   [search with slash](https://redmine.acdh.oeaw.ac.at/issues/20174) issue.  
-  * As it can't be easily overriden with a new code, it is copied on package install/update to 
+  * As it can't be easily overriden with a new code, it is copied to
     `{FuVindDir}/module/VuFindSearch/src/VuFindSearch/Backend/Solr/LuceneSyntaxHelper.php`
-    using composer's `post-update-cmd` feature (which is admitedly very ugly but avoids overriding
-    of the whole VuFind/AkSearch Solr search backend classes stack).
+    by the [Dockerfile](https://github.com/acdh-oeaw/AkSearchWeb/blob/main/Dockerfile) creating the deployment docker image 
+    (which is admitedly very ugly but avoids overriding of the whole VuFind/AkSearch Solr search backend classes stack).
 
 The detailed description of particular features is included in the `docs` folder.
 

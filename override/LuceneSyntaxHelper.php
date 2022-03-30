@@ -2,8 +2,9 @@
 
 /**
  * Tuned version of the lucene query syntax helper class.
- * It's unpacked to the VuFind's module/VuFindSearch/src/VuFindSearch/Backend/Solr/LuceneSyntaxHelper.php
- * using composer's post-update-cmd feature
+ * To be copied to {FuVindDir}/module/VuFindSearch/src/VuFindSearch/Backend/Solr/LuceneSyntaxHelper.php
+ * See https://redmine.acdh.oeaw.ac.at/issues/20174
+ * and https://github.com/acdh-oeaw/AkSearchWeb/blob/main/Dockerfile
  *
  * PHP version 7
  *
