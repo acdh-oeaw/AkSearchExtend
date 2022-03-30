@@ -58,9 +58,10 @@ class Alma extends \VuFind\ILS\Driver\Alma {
         // The path for the API call. We call "ALL" available items, but not at once
         // as a pagination mechanism is used. If paging params are not set for some
         // reason, the first 10 items are called which is the default API behaviour.
+        $orderBy = $this->config['Holdings']['orderBy'] ?? 'library,location,enum_a,enum_b';
         $itemsPath = '/bibs/' . rawurlencode($id) . '/holdings/ALL/items?'
             . $apiPagingParams
-            . '&order_by=library,location,enum_a,enum_b&direction=desc'
+            . '&order_by=' . urlencode($orderBy) . '&direction=desc'
             . '&expand=due_date';
 
         if ($items = $this->makeRequest($itemsPath)) {
