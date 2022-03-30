@@ -6,12 +6,15 @@ Can also serve as an example of extending VuFind with your own module being load
 
 ## What is being added by this module
 
-* List of available holdings for so-called LKR records.
-  This is done by overwritting the `VuFind\RecordDriver\SolrMarc` with our own class `aksearchExt\SolrMarc`.
-  `aksearchExt\SolrMarc` extends `AkSearch\RecordDriver\SolrMarc` and reimplements the `getRealTimeHoldings()` method (coming from `VuFind\RecordDriver\IlsAwareTrait` being used by the `AkSearch\RecordDriver\SolrMarc`).
-* Recognition of open access records based on the 506 MARC field (by the `aksearchExt\SolrMarc::getOpenAccessData()`)
-* Adaptive record id retrieval based on the context (implemented in the `aksearchExt\SolrMarc::getUniqueID()` overridding VuFind\RecordDriver\SolrMarc::getUniqueID()`).
-  * When the identifier used for parent-child relation is required, an AC identifier (MARC field 009) is used instead of ordinary id (MARC field 001).
+* Tuned version of the SolrMarc class (`aksearchExt\SolrMarc`)
+* Tuned version of the ILS driver class (`aksearchExt\Alma`)
+* Additional record view tab (`aksearchExt\RecordTab\Exemplarspezifika`)
+* Tuned version of the `VuFindSearch\Backend\Solr\LuceneSyntaxHelper` class resolving the
+  [search with slash](https://redmine.acdh.oeaw.ac.at/issues/20174) issue.  
+  * As it can't be easily overriden with a new code, it is copied on package install/update to 
+    `{FuVindDir}/module/VuFindSearch/src/VuFindSearch/Backend/Solr/LuceneSyntaxHelper.php`
+    using composer's `post-update-cmd` feature (which is admitedly very ugly but avoids overriding
+    of the whole VuFind/AkSearch Solr search backend classes stack).
 
 The detailed description of particular features is included in the `docs` folder.
 
