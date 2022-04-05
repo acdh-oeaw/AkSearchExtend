@@ -58,98 +58,104 @@ class Alma extends \VuFind\ILS\Driver\Alma {
         // The path for the API call. We call "ALL" available items, but not at once
         // as a pagination mechanism is used. If paging params are not set for some
         // reason, the first 10 items are called which is the default API behaviour.
-        $orderBy = $this->config['Holdings']['orderBy'] ?? 'library,location,enum_a,enum_b';
+        $orderBy   = $this->config['Holdings']['orderBy'] ?? 'library,location,enum_a,enum_b';
         $itemsPath = '/bibs/' . rawurlencode($id) . '/holdings/ALL/items?'
             . $apiPagingParams
             . '&order_by=' . urlencode($orderBy) . '&direction=desc'
             . '&expand=due_date';
 
-        if ($items = $this->makeRequest($itemsPath)) {
-            // Get the total number of items returned from the API call and set it to
-            // a class variable. It is then used in VuFind\RecordTab\HoldingsILS for
-            // the items paginator.
-            $results['total'] = (int) $items->attributes()->total_record_count;
+        // https://redmine.acdh.oeaw.ac.at/issues/20277
+        try {
+            $items = $this->makeRequest($itemsPath);
+            if ($items) {
+                // Get the total number of items returned from the API call and set it to
+                // a class variable. It is then used in VuFind\RecordTab\HoldingsILS for
+                // the items paginator.
+                $results['total'] = (int) $items->attributes()->total_record_count;
 
-            foreach ($items->item as $item) {
-                $number    = ++$copyCount;
-                $holdingId = (string) $item->holding_data->holding_id;
-                $itemId    = (string) $item->item_data->pid;
-                $barcode   = (string) $item->item_data->barcode;
-                $status    = (string) $item->item_data->base_status[0]
-                        ->attributes()['desc'];
-                $duedate   = $item->item_data->due_date ? $this->parseDate((string) $item->item_data->due_date) : null;
-                if ($duedate && 'Item not in place' === $status) {
-                    $status = 'Checked Out';
-                }
+                foreach ($items->item as $item) {
+                    $number    = ++$copyCount;
+                    $holdingId = (string) $item->holding_data->holding_id;
+                    $itemId    = (string) $item->item_data->pid;
+                    $barcode   = (string) $item->item_data->barcode;
+                    $status    = (string) $item->item_data->base_status[0]->attributes()['desc'];
+                    $duedate   = $item->item_data->due_date ? $this->parseDate((string) $item->item_data->due_date) : null;
+                    if ($duedate && 'Item not in place' === $status) {
+                        $status = 'Checked Out';
+                    }
 
-                $itemNotes = !empty($item->item_data->public_note) ? [(string) $item->item_data->public_note] : null;
+                    $itemNotes = !empty($item->item_data->public_note) ? [(string) $item->item_data->public_note] : null;
 
-                $processType = (string) ($item->item_data->process_type ?? '');
-                if ($processType && 'LOAN' !== $processType) {
-                    $status = $this->getTranslatableStatusString(
-                        $item->item_data->process_type
-                    );
-                }
+                    $processType = (string) ($item->item_data->process_type ?? '');
+                    if ($processType && 'LOAN' !== $processType) {
+                        $status = $this->getTranslatableStatusString(
+                            $item->item_data->process_type
+                        );
+                    }
 
-                $description = null;
-                if (!empty($item->item_data->description)) {
-                    $number      = (string) $item->item_data->description;
-                    $description = (string) $item->item_data->description;
-                }
+                    $description = null;
+                    if (!empty($item->item_data->description)) {
+                        $number      = (string) $item->item_data->description;
+                        $description = (string) $item->item_data->description;
+                    }
 
-                // merge fields manually created by original VuFind code with all
-                // item.item_data fields provided by the Alma REST API
-                $data    = [
-                    'id'           => $id,
-                    'source'       => 'Solr',
-                    'availability' => $this->getAvailabilityFromItem($item),
-                    'status'       => $status,
-                    'location'     => $this->getItemLocation($item),
-                    'reserve'      => 'N', // TODO: support reserve status
-                    'callnumber'   => $this->getTranslatableString(
-                        $item->holding_data->call_number
-                    ),
-                    'duedate'      => $duedate,
-                    'returnDate'   => false, // TODO: support recent returns
-                    'number'       => $number,
-                    'barcode'      => empty($barcode) ? 'n/a' : $barcode,
-                    'item_notes'   => $itemNotes ?? null,
-                    'item_id'      => $itemId,
-                    'holding_id'   => $holdingId,
-                    'holdtype'     => 'auto',
-                    'addLink'      => $patron ? 'check' : false,
-                    // For Alma title-level hold requests
-                    'description'  => $description ?? null
-                ];
-                $rawData = [];
-                foreach ((array) $item->item_data as $k => $v) {
-                    $rawData[$k] = (string) $v;
-                }
-                $results['holdings'][] = array_merge($rawData, $data);
-            }
-        }
-
-        // Fetch also digital and/or electronic inventory if configured
-        $types = $this->getInventoryTypes();
-        if (in_array('d_avail', $types) || in_array('e_avail', $types)) {
-            // No need for physical items
-            $key = array_search('p_avail', $types);
-            if (false !== $key) {
-                unset($types[$key]);
-            }
-            $statuses   = $this->getStatusesForInventoryTypes((array) $id, $types);
-            $electronic = [];
-            foreach ($statuses as $record) {
-                foreach ($record as $status) {
-                    $electronic[] = $status;
+                    // merge fields manually created by original VuFind code with all
+                    // item.item_data fields provided by the Alma REST API
+                    $data    = [
+                        'id'           => $id,
+                        'source'       => 'Solr',
+                        'availability' => $this->getAvailabilityFromItem($item),
+                        'status'       => $status,
+                        'location'     => $this->getItemLocation($item),
+                        'reserve'      => 'N', // TODO: support reserve status
+                        'callnumber'   => $this->getTranslatableString($item->holding_data->call_number),
+                        'duedate'      => $duedate,
+                        'returnDate'   => false, // TODO: support recent returns
+                        'number'       => $number,
+                        'barcode'      => empty($barcode) ? 'n/a' : $barcode,
+                        'item_notes'   => $itemNotes ?? null,
+                        'item_id'      => $itemId,
+                        'holding_id'   => $holdingId,
+                        'holdtype'     => 'auto',
+                        'addLink'      => $patron ? 'check' : false,
+                        // For Alma title-level hold requests
+                        'description'  => $description ?? null
+                    ];
+                    $rawData = [];
+                    foreach ((array) $item->item_data as $k => $v) {
+                        $rawData[$k] = (string) $v;
+                    }
+                    $results['holdings'][] = array_merge($rawData, $data);
                 }
             }
-            $results['electronic_holdings'] = $electronic;
+
+            // Fetch also digital and/or electronic inventory if configured
+            $types = $this->getInventoryTypes();
+            if (in_array('d_avail', $types) || in_array('e_avail', $types)) {
+                // No need for physical items
+                $key = array_search('p_avail', $types);
+                if (false !== $key) {
+                    unset($types[$key]);
+                }
+                $statuses   = $this->getStatusesForInventoryTypes((array) $id, $types);
+                $electronic = [];
+                foreach ($statuses as $record) {
+                    foreach ($record as $status) {
+                        $electronic[] = $status;
+                    }
+                }
+                $results['electronic_holdings'] = $electronic;
+            }
+        } catch (\VuFind\Exception\ILS $e) {
+            if ($e->getCode() !== 400 || !preg_match('/Input parameters mmsId [0-9]+ is not valid/', $e->getMessage())) {
+                throw $e;
+            }
         }
 
         return $results;
     }
-     /**
+
+    /**
      * Parse a date.
      *
      * @param string  $date     Date to parse
@@ -157,8 +163,7 @@ class Alma extends \VuFind\ILS\Driver\Alma {
      *
      * @return string
      */
-    public function parseDate($date, $withTime = false)
-    {
+    public function parseDate($date, $withTime = false) {
         // Remove trailing Z from end of date
         // e.g. from Alma we get dates like 2012-07-13Z without time, which is wrong)
         if (strpos($date, 'T') === false && substr($date, -1) === 'Z') {
@@ -166,13 +171,12 @@ class Alma extends \VuFind\ILS\Driver\Alma {
         }
 
         $compactDate = "/^[0-9]{8}$/"; // e. g. 20120725
-        $euroName = "/^[0-9]+\/[A-Za-z]{3}\/[0-9]{4}$/"; // e. g. 13/jan/2012
-        $euro = "/^[0-9]+\/[0-9]+\/[0-9]{4}$/"; // e. g. 13/7/2012
-        $euroPad = "/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{2,4}$/"; // e. g. 13/07/2012
-        $datestamp = "/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/"; // e. g. 2012-07-13
-        $timestamp = "/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/";
-        $timestampMs
-            = "/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z$/";
+        $euroName    = "/^[0-9]+\/[A-Za-z]{3}\/[0-9]{4}$/"; // e. g. 13/jan/2012
+        $euro        = "/^[0-9]+\/[0-9]+\/[0-9]{4}$/"; // e. g. 13/7/2012
+        $euroPad     = "/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{2,4}$/"; // e. g. 13/07/2012
+        $datestamp   = "/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/"; // e. g. 2012-07-13
+        $timestamp   = "/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/";
+        $timestampMs = "/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z$/";
         // e. g. 2017-07-09T18:00:00
 
         if ($date == null || $date == '') {
@@ -192,32 +196,30 @@ class Alma extends \VuFind\ILS\Driver\Alma {
                 $timestamp = new \DateTimeImmutable($date);
                 return $timestamp->format('Y-m-d H:i:s');
                 /*
-                return $this->dateConverter->convertToDisplayDateAndTime(
-                    'Y-m-d\TH:i:sT',
-                    $date
-                );*/
+                  return $this->dateConverter->convertToDisplayDateAndTime(
+                  'Y-m-d\TH:i:sT',
+                  $date
+                  ); */
             } else {
                 return $this->dateConverter->convertToDisplayDate(
-                    'Y-m-d',
-                    substr($date, 0, 10)
+                        'Y-m-d',
+                        substr($date, 0, 10)
                 );
             }
         } elseif (preg_match($timestampMs, $date) === 1) {
             if ($withTime) {
                 return $this->dateConverter->convertToDisplayDateAndTime(
-                    'Y-m-d\TH:i:s#???T',
-                    $date
+                        'Y-m-d\TH:i:s#???T',
+                        $date
                 );
             } else {
                 return $this->dateConverter->convertToDisplayDate(
-                    'Y-m-d',
-                    substr($date, 0, 10)
+                        'Y-m-d',
+                        substr($date, 0, 10)
                 );
             }
         } else {
             throw new \Exception("Invalid date: $date");
         }
     }
-
-   
 }
