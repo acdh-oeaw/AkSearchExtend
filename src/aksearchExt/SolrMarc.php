@@ -138,7 +138,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $id = $this->getUniqueID();
 
         // get normal holdings
-        $results = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
+        $results                       = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
+        $results['lkrHoldingsSummary'] = [];
 
         // <-- LKR
         //     https://redmine.acdh.oeaw.ac.at/issues/14550
@@ -162,7 +163,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 //print_r(['LKR2', $lkrId, $matchValue]);
                 $lkrResults = $this->holdLogic->getHoldings($lkrId, $this->tryMethod('getConsortialIDs'));
                 // add only items matching the barcode/enumeration_a
-                foreach ($lkrResults['holdings'] as $location => $holding) {
+                foreach ($lkrResults['holdings'] as $group => $holding) {
                     $holdingId        = null;
                     $items            = $holding['items'];
                     $holding['items'] = [];
@@ -176,20 +177,22 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                         }
                     }
                     if (count($holding['items']) > 0) {
-                        // join with normal items
-                        if (!isset($results['holdings'][$location])) {
-                            $results['holdings'][$location] = $holding;
-                        } else {
-                            $results['holdings'][$location]['items'] = array_merge(
-                                $results['holdings'][$location]['items'],
-                                $holding['items']
-                            );
+                        if (!isset($results['holdings'][$group])) {
+                            $results['holdings'][$group] = [
+                                'items'    => [],
+                                'lkrItems' => [],
+                            ];
                         }
-                        if (!isset($results['holdingsSummary'][$holdingId])) {
-                            $holdingData                            = $lkrResults['holdingsSummary'][$holdingId];
-                            $holdingData['holdingType']             = 'LKR';
-                            $results['holdingsSummary'][$holdingId] = $holdingData;
+                        if (!isset($results['holdings'][$group]['lkrItems'])) {
+                            $results['holdings'][$group]['lkrItems'] = [];
                         }
+                        foreach ($holding['items'] as $i) {
+                            $results['holdings'][$group]['lkrItems'][] = $i;
+                        }
+                        if (!isset($results['lkrHoldingsSummary'][$group])) {
+                            $results['lkrHoldingsSummary'][$group] = [];
+                        }
+                        $results['lkrHoldingsSummary'][$group][] = $lkrResults['holdingsSummary'][$group];
                     }
                 }
             }

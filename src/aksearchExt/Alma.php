@@ -67,6 +67,7 @@ class Alma extends \VuFind\ILS\Driver\Alma {
 
         // https://redmine.acdh.oeaw.ac.at/issues/20277
         try {
+            $groupingProperty = $this->config['Catalog']['holdings_grouping'];
             $items = $this->makeRequest($itemsPath);
             if ($items) {
                 // Get the total number of items returned from the API call and set it to
@@ -120,19 +121,22 @@ class Alma extends \VuFind\ILS\Driver\Alma {
                         'holdtype'     => 'auto',
                         'addLink'      => $patron ? 'check' : false,
                         // For Alma title-level hold requests
-                        'description'  => $description ?? null
+                        'description'  => $description ?? null,
                     ];
                     $rawData = [];
                     foreach ((array) $item->item_data as $k => $v) {
                         $rawData[$k] = (string) $v;
                     }
-                    $results['holdings'][] = array_merge($rawData, $data);
+                    $data = array_merge($rawData, $data);
+                    $data['group'] = (string) $data[$groupingProperty];
+                    $results['holdings'][] = $data;
 
                     // see docs/holdings.md
                     // https://redmine.acdh.oeaw.ac.at/issues/19645
-                    if (!isset($results['holdingsSummary'][$holdingId])) {
-                        $results['holdingsSummary'][(string) $holdingId] = $this->getHoldingSummary($id, $holdingId);
+                    if (!isset($results['holdingsSummary'][$data['group']])) {
+                        $results['holdingsSummary'][$data['group']] = [];
                     }
+                    $results['holdingsSummary'][$data['group']][] = $this->getHoldingSummary($id, $holdingId);
                 }
             }
 
