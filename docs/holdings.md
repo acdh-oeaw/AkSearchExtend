@@ -28,6 +28,7 @@
   * A header containing translated libraryCode
   * A table displaying non-empty holding summary fields:
     | summary field     | MARC returned by the Alma API |
+    | ----------------- | ----------------------------- |
     | locationName      | `852_81_c`, `852_8#_c`        |
     | callNos           | `852_81_h`, `852_8#_h`        |
     | callnumberNotes   | `852_81_z`, `852_8#_z`        |
