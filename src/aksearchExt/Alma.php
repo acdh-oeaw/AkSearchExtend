@@ -136,7 +136,9 @@ class Alma extends \VuFind\ILS\Driver\Alma {
                     if (!isset($results['holdingsSummary'][$data['group']])) {
                         $results['holdingsSummary'][$data['group']] = [];
                     }
-                    $results['holdingsSummary'][$data['group']][] = $this->getHoldingSummary($id, $holdingId);
+                    if (!isset($results['holdingsSummary'][$data['group']][$holdingId])) {
+                        $results['holdingsSummary'][$data['group']][$holdingId] = $this->getHoldingSummary($id, $holdingId);
+                    }
                 }
             }
 
