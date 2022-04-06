@@ -39,8 +39,9 @@ class Alma extends \VuFind\ILS\Driver\Alma {
     public function getHolding($id, $patron = null, array $options = []) {
         // Prepare result array with default values. If no API result can be received
         // these will be returned.
-        $results['total']    = 0;
-        $results['holdings'] = [];
+        $results['total']           = 0;
+        $results['holdings']        = [];
+        $results['holdingsSummary'] = [];
 
         // Correct copy count in case of paging
         $copyCount = $options['offset'] ?? 0;
@@ -106,7 +107,7 @@ class Alma extends \VuFind\ILS\Driver\Alma {
                         'source'       => 'Solr',
                         'availability' => $this->getAvailabilityFromItem($item),
                         'status'       => $status,
-                        'location'     => $this->getItemLocation($item),
+                        'location'     => (string) $item->item_data->location,
                         'reserve'      => 'N', // TODO: support reserve status
                         'callnumber'   => $this->getTranslatableString($item->holding_data->call_number),
                         'duedate'      => $duedate,
@@ -126,6 +127,12 @@ class Alma extends \VuFind\ILS\Driver\Alma {
                         $rawData[$k] = (string) $v;
                     }
                     $results['holdings'][] = array_merge($rawData, $data);
+
+                    // see docs/holdings.md
+                    // https://redmine.acdh.oeaw.ac.at/issues/19645
+                    if (!isset($results['holdingsSummary'][$holdingId])) {
+                        $results['holdingsSummary'][(string) $holdingId] = $this->getHoldingSummary($id, $holdingId);
+                    }
                 }
             }
 
@@ -153,6 +160,71 @@ class Alma extends \VuFind\ILS\Driver\Alma {
         }
 
         return $results;
+    }
+
+    /**
+     * Fetches library summary data for a given holding
+     * See docs/holdings.md
+     * https://redmine.acdh.oeaw.ac.at/issues/19645
+     * 
+     * @param string $id
+     * @param string $holdingId
+     * @return array
+     */
+    private function getHoldingSummary(string $id, string $holdingId): array {
+        $result = [
+            'libraryCode'       => '',
+            'locationCode'      => '',
+            'callNos'           => '',
+            'callnumberNotes'   => '',
+            'holdingsAvailable' => '',
+            'gaps'              => '',
+            'holdingsPrefix'    => '',
+            'holdingsNotes'     => '',
+        ];
+
+        $request = '/bibs/' . rawurlencode($id) . '/holdings/' . rawurldecode($holdingId);
+        $holding = $this->makeRequest($request);
+        if ($holding) {
+            foreach ($holding->record as $record) {
+                foreach ($record->datafield as $field) {
+                    $attr = $field->attributes();
+                    $tag  = $attr['tag'] . '_' . $attr['ind1'] . $attr['ind2'];
+                    if ($tag === '852_81' || $tag === '852_8 ') {
+                        $subfields                 = $this->extractMarcSubfields($field);
+                        $result['libraryCode']     = $subfields->b ?? '';
+                        $result['locationCode']    = $subfields->c ?? '';
+                        $result['callNos']         = $subfields->h ?? '';
+                        $result['callnumberNotes'] = $subfields->z ?? '';
+                    } elseif ($tag === '866_30') {
+                        $subfields                   = $this->extractMarcSubfields($field);
+                        $result['holdingsAvailable'] = $subfields->a ?? '';
+                        $result['gaps']              = $subfields->z ?? '';
+                        $result['holdingsPrefix']    .= $subfields->{9} ?? '';
+                    } elseif ($tag === '866_ 0') {
+                        $subfields                = $this->extractMarcSubfields($field);
+                        $result['holdingsPrefix'] .= $subfields->a ?? '';
+                        $result['holdingsNotes']  = $subfields->z ?? '';
+                    }
+                }
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Helper for parsing MARC fetched from the Alma REST API
+     * 
+     * @param \SimpleXMLElement $field
+     * @return object
+     */
+    private function extractMarcSubfields(\SimpleXMLElement $field): object {
+        $data = new \stdClass();
+        foreach ($field->subfield as $i) {
+            $code        = $i->attributes()['code'];
+            $data->$code = (string) $i;
+        }
+        return $data;
     }
 
     /**
