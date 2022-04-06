@@ -163,9 +163,11 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 $lkrResults = $this->holdLogic->getHoldings($lkrId, $this->tryMethod('getConsortialIDs'));
                 // add only items matching the barcode/enumeration_a
                 foreach ($lkrResults['holdings'] as $location => $holding) {
+                    $holdingId        = null;
                     $items            = $holding['items'];
                     $holding['items'] = [];
                     foreach ($items as $item) {
+                        $holdingId  = $item['holding_id'];
                         $itemValues = [$item['barcode'], $item['enumeration_a'],
                             $item['enumeration_b']];
                         if (count(array_intersect($matchValue, $itemValues)) > 0) {
@@ -182,6 +184,11 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                                 $results['holdings'][$location]['items'],
                                 $holding['items']
                             );
+                        }
+                        if (!isset($results['holdingsSummary'][$holdingId])) {
+                            $holdingData                            = $lkrResults['holdingsSummary'][$holdingId];
+                            $holdingData['holdingType']             = 'LKR';
+                            $results['holdingsSummary'][$holdingId] = $holdingData;
                         }
                     }
                 }

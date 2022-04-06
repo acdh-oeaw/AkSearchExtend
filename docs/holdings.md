@@ -24,8 +24,9 @@
 
 * Grouped by `item_data.holding_id` in the Alma REST API response.
   * Can be done by setting `{config/vufind/config.ini}[Catalog].holdings_grouping` to `holding_id`.
+  * LKR holdings should be treated as separate ones, even if they share same `holding_id` with the normal ones.
 * Every holding displayed separately with:
-  * A header containing translated libraryCode
+  * A header containing translated libraryCode but only if it differs from the previously rendered holding.
   * A table displaying non-empty holding summary fields:
     | summary field     | MARC returned by the Alma API |
     | ----------------- | ----------------------------- |
@@ -64,3 +65,11 @@
 * electronic portfolios: 990002108420504498 ([#19474](https://redmine.acdh.oeaw.ac.at/issues/19474))
 * many items of the same holding: 993526014304498
 * LKR: 990000268490504498 ([#14550](https://redmine.acdh.oeaw.ac.at/issues/14550))
+* LKR mixing holdings within same library: 990000272520504498 ([#14550](https://redmine.acdh.oeaw.ac.at/issues/14550))
+
+## Known issues
+
+* Paging and LKR. 
+  Paging is supported on the ILS driver level but we retrieve LKRs with a separate ILS driver call.
+  As a result paging is applied separately for normal and LKR resources and after that both sets of data are merged together
+  resulting in "n-th page of normal resources and n-th page of LKRs".
