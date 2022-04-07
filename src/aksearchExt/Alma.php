@@ -37,6 +37,9 @@ class Alma extends \VuFind\ILS\Driver\Alma {
      * @return type
      */
     public function getHolding($id, $patron = null, array $options = []) {
+        print_r($id);
+        return [];
+        
         // Prepare result array with default values. If no API result can be received
         // these will be returned.
         $results['total']           = 0;

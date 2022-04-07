@@ -31,6 +31,7 @@ use VuFindSearch\Query\Query;
 use VuFindSearch\ParamBag;
 use VuFind\View\Helper\Root\RecordLink;
 use VuFind\RecordTab\ComponentParts;
+use aksearchExt\container\IlsHoldingId;
 
 class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
@@ -134,16 +135,45 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         return $this->getMarcRecord()->getField(9)->getData();
     }
 
+    /**
+     * LKR:
+     * - https://redmine.acdh.oeaw.ac.at/issues/14550
+     * - https://redmine.acdh.oeaw.ac.at/issues/19566
+     * 
+     */
     public function getRealTimeHoldings() {
-        $id = $this->getUniqueID();
+        $ids   = [];
+        $ids[] = new IlsHoldingId($this->getUniqueID());
+
+        $marc       = $this->getMarcRecord();
+        $lkrRecords = $this->getMarcFieldsAsObject($marc, 773, 1, 8, ['w']);
+        foreach ($lkrRecords as $lkrRecord) {
+            if (empty($lkrRecord->w) || empty($lkrRecord->g)) {
+                continue;
+            }
+            $ctrlnum = preg_replace('/^.*[)]/', '', $lkrRecord->w);
+            $param   = new ParamBag(['fl' => 'id']);
+            $record  = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, $param)->first();
+            if ($record !== null) {
+                // there might be many subfield g values (!)
+                // for now we optimistically assume the prefix (which we skip using preg_replace())
+                // doesn't count
+                $ids[] = new IlsHoldingId($record->getRawData()['id'], preg_replace('/^.*:/', '', $lkrRecord->g));
+            }
+        }
+
+        $this->holdLogic->getHoldings($ids);
+        return [
+            'holdings'           => [],
+            'holdingsSummary'    => [],
+            'lkrHoldingsSummary' => []
+        ];
 
         // get normal holdings
         $results                       = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
         $results['lkrHoldingsSummary'] = [];
 
         // <-- LKR
-        //     https://redmine.acdh.oeaw.ac.at/issues/14550
-        //     https://redmine.acdh.oeaw.ac.at/issues/19566
         $marc       = $this->getMarcRecord();
         $lkrRecords = $this->getMarcFieldsAsObject($marc, 773, 1, 8, ['w']);
         foreach ($lkrRecords as $lkrRecord) {
@@ -524,13 +554,13 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $secCorp      = (array) ($this->fields['author2_corporate_txt_mv'] ?? []);
         $secMeet      = (array) ($this->fields['author2_meeting_txt_mv'] ?? []);
 
-        $authorsCorp = $this->mergeAuthorsAndRoles($primCorp, $primCorpRole);
-        $authors     = $this->mergeAuthorsAndRoles($primPers, $primRole);
-        $authors2    = $this->mergeAuthorsAndRoles($secPers, $secRole);
+        $authorsCorp       = $this->mergeAuthorsAndRoles($primCorp, $primCorpRole);
+        $authors           = $this->mergeAuthorsAndRoles($primPers, $primRole);
+        $authors2          = $this->mergeAuthorsAndRoles($secPers, $secRole);
         // Merge array
-        $merged      = array_merge($authors, $authorsCorp, $primMeet, $authors2, $secCorp, $secMeet);
+        $merged            = array_merge($authors, $authorsCorp, $primMeet, $authors2, $secCorp, $secMeet);
         $mergedWithOutRole = array_merge($primPers, $primCorp, $primMeet, $secPers, $secCorp, $secMeet);
-        
+
         //we have to pass two arrays, one if for the display text with the authors and roles
         //the second is for the search url, because if we add the roles also, then the search will fails
         // Return merged array
