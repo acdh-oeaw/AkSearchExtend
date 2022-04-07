@@ -529,9 +529,12 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $authors2    = $this->mergeAuthorsAndRoles($secPers, $secRole);
         // Merge array
         $merged      = array_merge($authors, $authorsCorp, $primMeet, $authors2, $secCorp, $secMeet);
-
+        $mergedWithOutRole = array_merge($primPers, $primCorp, $primMeet, $secPers, $secCorp, $secMeet);
+        
+        //we have to pass two arrays, one if for the display text with the authors and roles
+        //the second is for the search url, because if we add the roles also, then the search will fails
         // Return merged array
-        return $merged;
+        return array('text' => $merged, 'url' => $mergedWithOutRole);
     }
 
     /**
