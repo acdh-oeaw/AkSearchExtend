@@ -551,4 +551,27 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         }
         return $authors;
     }
+    
+    
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/14549
+     * 
+     * Extend the Description tab with the responsibility Note
+     * @return array
+     */
+    public function getExtraDescriptionData(): array {
+        $marc    = $this->getMarcRecord();
+        $value = $this->getMarcFieldsAsObject($marc, '245', null, null);
+        
+        $return = array();
+        if(count($value) > 0) {
+            foreach($value as $v) {
+                if(isset($v->c)) {
+                    $return[] = $v->c;
+                }
+            }            
+        }   
+        return $return;
+
+    }
 }
