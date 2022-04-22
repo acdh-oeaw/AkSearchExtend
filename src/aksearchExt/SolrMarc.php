@@ -546,10 +546,33 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     private function mergeAuthorsAndRoles($names, $roles): array {
         $authors = array();
         foreach ($names as $key1 => $value1) {
-            // store IP
-            $authors[$key1] = $value1 . ' [' . $roles[$key1] . ']';
+            if(count($authors) > 0) {
+                foreach($authors as $ak => $av) {
+                    if($av['name'] == $value1) {
+                        $authors[$ak]['role'][] = $roles[$key1];
+                    } else {
+                     $authors[$key1] = array("name" => $value1, "role" => array($roles[$key1]));   
+                    }
+                }
+            }else {
+                $authors[$key1] = array("name" => $value1, "role" => array($roles[$key1]));
+            }
         }
-        return $authors;
+        return $this->mergeRolesForSearchView($authors);
+    }
+    
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/19499
+     * @param type $names
+     * @param type $roles
+     * @return array
+     */
+    private function mergeRolesForSearchView(array $authors) {
+        $result = [];
+        foreach($authors as $k => $v) {
+            $result[$k] = $v['name'].' [ '.implode(", ", $v["role"]).' ]';
+        }
+        return $result;
     }
     
     
