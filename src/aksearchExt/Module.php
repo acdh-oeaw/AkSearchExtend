@@ -34,7 +34,12 @@ class Module {
 
     public function getConfig() {
         return [
-            'vufind' => [
+            'service_manager' => [
+                'factories' => [
+                    'aksearchExt\ILSHoldLogic' => 'VuFind\ILS\Logic\LogicFactory',
+                ],
+            ],
+            'vufind'          => [
                 'plugin_managers' => [
                     'recorddriver' => [
                         'factories'  => [
@@ -45,7 +50,7 @@ class Module {
                         ],
                         'delegators' => [
                             'aksearchExt\SolrMarc' => [
-                                'AkSearch\RecordDriver\IlsAwareDelegatorFactory'
+                                'aksearchExt\IlsAwareDelegatorFactory'
                             ]
                         ]
                     ],
