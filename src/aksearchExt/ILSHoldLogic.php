@@ -55,26 +55,16 @@ class ILSHoldLogic extends \VuFind\ILS\Logic\Holds {
             throw new ILSException("consortium ids not supported");
         }
 
-        $config = $this->catalog->checkFunction('Holds', ['id' => $ids]);//TODO - check what it does
         $result = $this->catalog->getHolding($ids, null, $options);
-        $mode   = $this->catalog->getHoldsMode();
 
-        /*
-        if ($mode == "disabled") {
-            $holdings = $this->standardHoldings($result);
-        } elseif ($mode == "driver") {
-            $holdings = $this->driverHoldings($result, $config, true);
-        } else {
-            $holdings = $this->generateHoldings($result, $mode, $config);
+        // generate hold URLs
+        $holdConfig = $this->catalog->checkFunction('Holds');
+        foreach ($result['holdings'] as $holding) {
+            foreach ($holding->items as $item) {
+                $item->link = $this->getRequestDetails($item->asVuFindArray(), $holdConfig['HMACKeys'], 'Hold');
+            }
         }
 
-        $holdings = $this->processStorageRetrievalRequests($holdings, $id, null, true);
-        $holdings = $this->processILLRequests($holdings, $id, null, true);
-
-        $result['blocks']   = false;
-        $result['holdings'] = $this->formatHoldings($holdings);
-        */
-        
         return $result;
     }
 }

@@ -38,16 +38,26 @@ class IlsHoldingId {
      * 
      * @var int
      */
-    public $id;
+    public int $mmsId;
+
+    /**
+     * 
+     * @var int|null
+     */
+    public ?int $holdingId;
 
     /**
      * 
      * @var array<string>
      */
     public array $itemFilter;
+    public bool $lkr;
 
-    public function __construct($id, array $itemFilter = []) {
-        $this->id         = $id;
+    public function __construct(int $mmsId, ?int $holdingId = null,
+                                array $itemFilter = [], bool $lkr = false) {
+        $this->mmsId      = $mmsId;
+        $this->holdingId  = $holdingId;
         $this->itemFilter = $itemFilter;
+        $this->lkr        = $lkr;
     }
 }

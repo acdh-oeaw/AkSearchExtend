@@ -10,7 +10,7 @@
     In our case that's where additional **LKR holdings retrieval** is handled ([#19566](https://redmine.acdh.oeaw.ac.at/issues/19566))
     as well as **electronic porfolios URLs** are set ([#19474](https://redmine.acdh.oeaw.ac.at/issues/19474)) (as the URL is only provided in MARC)
   * `VuFind\ILS\Logic\Holds::getHoldings()`:
-    * calls `{ilsDriver}::getHolding()`
+    * calls `{ilsConnection}::getHolding()` which handles paging options and calls `{ilsDriver}::getHolding()`
         * `aksearchExt\Alma::getHolding()` fetches holdings list from the Alma REST API.  
           We had to override the original method so first, all fields from the response important to us were preserved (see the LKR)
           and second, holding summary data is generated.
@@ -71,6 +71,10 @@ Fortunately all of these classes can be overridden with the module config:
 
 ## Desired display
 
+* Electronic holdings displayed only on the first page, before normal holdings.
+  * To make things simple we don't count them in paging.
+    (as they are fetched from MARC record counting them in paging would require passing their count
+    to the `aksearchExt\Alma::getHolding()`)
 * Grouped either by `item_data.holding_id` or `item_data.library` in the Alma REST API response.
   * As we want to avoid overriding `VuFind\ILS\Logic\Holds` and we need to separately fetch holding summaries,
     the grouping has been moved to the `aksearchExt\Alma::getHolding()` which reads
@@ -105,7 +109,7 @@ Fortunately all of these classes can be overridden with the module config:
     | column | property in `{recordDriver}:: getRealTimeHoldings()` return value | property in Alma REST API response | where the mapping takes place | MARC [1] |
     | --- | --- | --- | --- | --- |
     | signature   | `callnumber`              | `holding_data. call_number`          | `aksearchExt\Alma::getHolding()` | `852_8#_h`     |
-    | signature2  | `alternative_call_number` | `item_data. alternative_call_number` | `aksearchExt\Alma::getHolding()` | `ITM_##_n`     |
+    | signature2  | `alternative_call_number` | `item_data.alternative_call_number` | `aksearchExt\Alma::getHolding()` | `ITM_##_n`     |
     | description | `description`             | `item_data.description`              | `aksearchExt\Alma::getHolding()` | `ITM_##_z`     |
     | location    | `location`                | `item_data.location`                 | `aksearchExt\Alma::getHolding()` | `ITM_##_2`     |
     | remarks     | `public_note`             | `item_data.public_note`              | `aksearchExt\Alma::getHolding()` | `ITM_##_z`     |
@@ -121,12 +125,15 @@ Fortunately all of these classes can be overridden with the module config:
 ## Test cases
 
 * all fields render: 993505611904498 ([#19550](https://redmine.acdh.oeaw.ac.at/issues/14550#note-40))
-* paging: 990000589940504498
-* electronic portfolios: 990002108420504498 ([#19474](https://redmine.acdh.oeaw.ac.at/issues/19474))
-* many items of the same holding: 993526014304498
-* LKR: 990000268490504498 ([#14550](https://redmine.acdh.oeaw.ac.at/issues/14550))
-* LKR mixing holdings within same library: 990000272520504498 ([#14550](https://redmine.acdh.oeaw.ac.at/issues/14550))
-* both itemized and not-itemized holdings: 990000517690504498 ([#19898](https://redmine.acdh.oeaw.ac.at/issues/19898))
+* 990000517690504498:
+  * paging (over 100 total items)
+  * both itemized and not-itemized holdings ([#19898](https://redmine.acdh.oeaw.ac.at/issues/19898))
+* 990002108420504498:
+  * electronic portfolios:  ([#19474](https://redmine.acdh.oeaw.ac.at/issues/19474))
+* 990000268490504498:
+  * LKR ([#14550](https://redmine.acdh.oeaw.ac.at/issues/14550))
+* 990000272520504498:
+  * LKR mixing holdings within same library ([#14550](https://redmine.acdh.oeaw.ac.at/issues/14550))
 
 ## Known issues
 
@@ -138,3 +145,14 @@ Fortunately all of these classes can be overridden with the module config:
   There are holdings which don't have any items but their summary should still be displayed.
   And paging should still work.
   So there's no other way than to reimplement the `VuFind\ILS\Logic\Holds` class.
+
+## Varia
+
+* Compact bactrace dump:
+  ```  
+  function backtrace(int $limit = 10000) {
+      foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, $limit) as $n => $i) {
+          echo "[$n]:".($i['file']??'').':'.($i['line']??'').':'.($i['class']??'').($i['type']??'').($i['function']??'').'()'."\n";
+      }
+  }
+  ```

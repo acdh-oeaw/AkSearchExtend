@@ -32,6 +32,8 @@ use VuFindSearch\ParamBag;
 use VuFind\View\Helper\Root\RecordLink;
 use VuFind\RecordTab\ComponentParts;
 use aksearchExt\container\IlsHoldingId;
+use aksearchExt\container\HoldingData;
+use aksearchExt\container\ItemData;
 
 class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
@@ -158,93 +160,22 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 // there might be many subfield g values (!)
                 // for now we optimistically assume the prefix (which we skip using preg_replace())
                 // doesn't count
-                $ids[] = new IlsHoldingId($record->getRawData()['id'], preg_replace('/^.*:/', '', $lkrRecord->g));
+                $ids[] = new IlsHoldingId($record->getRawData()['id'], null, preg_replace('/^.*:/', '', $lkrRecord->g), true);
             }
         }
 
-        $this->holdLogic->getHoldings($ids);
-        return [
-            'holdings'           => [],
-            'holdingsSummary'    => [],
-            'lkrHoldingsSummary' => []
-        ];
+        $results = $this->holdLogic->getHoldings($ids);
 
-        // get normal holdings
-        $results                       = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
-        $results['lkrHoldingsSummary'] = [];
-
-        // <-- LKR
-        $marc       = $this->getMarcRecord();
-        $lkrRecords = $this->getMarcFieldsAsObject($marc, 773, 1, 8, ['w']);
-        foreach ($lkrRecords as $lkrRecord) {
-            if (empty($lkrRecord->w) || empty($lkrRecord->g)) {
-                continue;
-            }
-            $ctrlnum = preg_replace('/^.*[)]/', '', $lkrRecord->w);
-            $param   = new ParamBag(['fl' => 'id']);
-            $record  = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, $param)->first();
-            //print_r(['LKR1', $ctrlnum, (int)is_object($record)]);
-            if ($record !== null) {
-                $lkrId      = $record->getRawData()['id'];
-                // $matchValue is an array (!) as there might be many subfield g values
-                // for now we optimistically assume the prefix (which we skip using preg_replace())
-                // doesn't count
-                $matchValue = preg_replace('/^.*:/', '', $lkrRecord->g);
-                //print_r(['LKR2', $lkrId, $matchValue]);
-                $lkrResults = $this->holdLogic->getHoldings($lkrId, $this->tryMethod('getConsortialIDs'));
-                // add only items matching the barcode/enumeration_a
-                foreach ($lkrResults['holdings'] as $group => $holding) {
-                    $holdingId        = null;
-                    $items            = $holding['items'];
-                    $holding['items'] = [];
-                    foreach ($items as $item) {
-                        $holdingId  = $item['holding_id'];
-                        $itemValues = [$item['barcode'], $item['enumeration_a'],
-                            $item['enumeration_b']];
-                        if (count(array_intersect($matchValue, $itemValues)) > 0) {
-                            //print_r($item);
-                            $holding['items'][] = $item;
-                        }
-                    }
-                    if (count($holding['items']) > 0) {
-                        if (!isset($results['holdings'][$group])) {
-                            $results['holdings'][$group] = [
-                                'items'    => [],
-                                'lkrItems' => [],
-                            ];
-                        }
-                        if (!isset($results['holdings'][$group]['lkrItems'])) {
-                            $results['holdings'][$group]['lkrItems'] = [];
-                        }
-                        foreach ($holding['items'] as $i) {
-                            $results['holdings'][$group]['lkrItems'][] = $i;
-                        }
-                        if (!isset($results['lkrHoldingsSummary'][$group])) {
-                            $results['lkrHoldingsSummary'][$group] = [];
-                        }
-                        $results['lkrHoldingsSummary'][$group][] = $lkrResults['holdingsSummary'][$group];
-                    }
-                }
-            }
-        }
-        //--> LKR
-        //<-- E-media Link for the electronic holdings
+        //<-- Electronic holdings
         //    https://redmine.acdh.oeaw.ac.at/issues/19474
-        if (isset($results['electronic_holdings'])) {
-            $electronic = null;
-            foreach ($this->getMarcFieldsAsObject($marc, 'AVE', null, null) as $ave) {
-                if (!empty($ave->x)) {
-                    $electronic = $ave->x;
-                    break;
-                }
-            }
-            if (!empty($electronic)) {
-                foreach ($results['electronic_holdings'] as &$v) {
-                    $v['e_url'] = $electronic;
-                }
-                unset($v);
+        foreach ($this->getMarcFieldsAsObject($marc, 'AVE') as $ave) {
+            if (!empty($ave->x)) {
+                $holding = new HoldingData(new IlsHoldingId($ave->{0}));
+                $holding->items[] = ItemData::fromAve($ave);
+                $results['electronic_holdings'][] = $holding;
             }
         }
+        //-->
 
         return $results;
     }
