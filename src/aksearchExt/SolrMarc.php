@@ -319,7 +319,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         if ($primaryName !== null) {
             $authors = $this->createSecondaryAuthors($primaryName, $primaryRole);
         }
-
+       
         // Get primary corporate author
         $corpName = $this->fields['author_corporate'][0] ?? null;
         $corpRole = $this->fields['author_corporate_role'][0] ?? null;
@@ -365,89 +365,79 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 'primary' => true
             ];
         }
+        
         // Add primary person authors to array (values from Marc21 field 700)
-        if ($authors) {
-            $basicRole = $authors[0]['role'];
-            foreach ($authors as $value) {
-                if (!isset($value['role'])) {
-                    $value['role'] = $basicRole;
-                }
-                // We have all values now, add them to the return array:
-                $contributors[$value['role']][] = [
-                    'entity'  => 'person',
-                    'name'    => $value['name'],
-                    'role'    => $value['role'],
-                    'auth'    => null,
-                    'primary' => false
-                ];
-            }
-        }
-
-        // Add secondary person authors to array (values from Marc21 field 700)
-        if ($authors2) {
-            $basicRole = $authors2[0]['role'];
-            foreach ($authors2 as $value) {
-                if (!isset($value['role'])) {
-                    $value['role'] = $basicRole;
-                }
-                // We have all values now, add them to the return array:
-                $contributors[$value['role']][] = [
-                    'entity'  => 'person',
-                    'name'    => $value['name'],
-                    'role'    => $value['role'],
-                    'auth'    => null,
-                    'primary' => false
-                ];
-            }
-        }
-
+        $authorsArray = array_merge_recursive($this->addAuthorsToContributorsArray($authors), $this->addAuthorsToContributorsArray($authors2));
+        $contributors = array_merge_recursive($contributors, $authorsArray);
+        
         // Add secondary corporation authors to array (values from Marc21 field 710)
-        if ($secCorps) {
-            foreach ($secCorps as $key => $value) {
-                if (($key % 3) == 0) { // First of 3 values
-                    $name = $value;
-                } else if (($key % 3) == 1) { // Second of 3 values
-                    $role = $value;
-                } else if (($key % 3) == 2) { // Third and last of 3 values
-                    $auth = $value;
-
-                    // We have all values now, add them to the return array:
-                    $contributors[$role][] = [
-                        'entity'  => 'corporation',
-                        'name'    => $name,
-                        'role'    => $role,
-                        'auth'    => $auth,
-                        'primary' => false
-                    ];
-                }
-            }
+        if($secCorps){
+            $this->getSecondaryAuthorData($contributors, $secCorps, 'corporation');
         }
-
         // Add secondary meeting authors to array (values from Marc21 field 711)
-        if ($secMeetings) {
-            foreach ($secMeetings as $key => $value) {
-                if (($key % 3) == 0) { // First of 3 values
-                    $name = $value;
-                } else if (($key % 3) == 1) { // Second of 3 values
-                    $role = $value;
-                } else if (($key % 3) == 2) { // Third and last of 3 values
-                    $auth = $value;
-
-                    // We have all values now, add them to the return array:
-                    $contributors[$role][] = [
-                        'entity'  => 'meeting',
-                        'name'    => $name,
-                        'role'    => $role,
-                        'auth'    => $auth,
-                        'primary' => false
-                    ];
-                }
-            }
+        if($secMeetings) {
+            $this->getSecondaryAuthorData($contributors, $secMeetings, 'meeting');
         }
-
+        
+        $this->removeContributorDuplicates($contributors);
         return $contributors;
     }
 
+    /**
+     * Create the secondary author additional data (corporation, meeting, etc..)
+     * @param array $contributors
+     * @param array $data
+     * @param string $entity
+     * @return array
+     */
+    private function getSecondaryAuthorData(array &$contributors, array $data, string $entity): array {
+         if (count($data) > 0 ) {
+            foreach ($data as $key => $value) {
+                if (($key % 3) == 0) { // First of 3 values
+                    $name = $value;
+                } else if (($key % 3) == 1) { // Second of 3 values
+                    $role = $value;
+                } else if (($key % 3) == 2) { // Third and last of 3 values
+                    $auth = $value;
+
+                    // We have all values now, add them to the return array:
+                    $contributors[$role][] = [
+                        'entity'  => $entity,
+                        'name'    => $name,
+                        'role'    => $role,
+                        'auth'    => $auth,
+                        'primary' => false
+                    ];
+                }
+            }
+        }
+        return $contributors;
+
+    }
+    
+    /**
+     * Remove the duplicates from the authors array
+     * @param array $contributors
+     * @return array
+     */
+    private function removeContributorDuplicates(array &$contributors): array {
+        foreach($contributors as $k => $v) {
+            $names = [];
+            foreach($v as $ok => $ov) {
+                if(count($names) > 0 ) {
+                    if(in_array($ov['name'], $names)) {
+                        unset($contributors[$k][$ok]);
+                    } else {
+                        $names[] = $ov['name'];
+                    }
+                } else {
+                    $names[] = $ov['name'];
+                }
+            }
+        }
+        return $contributors;
+    }
+    
     /**
      * Create the MARC 700 field authors for the gui core-phtml
      * @param type $names
@@ -558,4 +548,28 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         return $return;
 
     }
+
+    private function addAuthorsToContributorsArray(array $authors): array {
+        $contributors = [];
+        if (count($authors) > 0) {
+        
+            $basicRole = $authors[0]['role'];
+            foreach ($authors as $value) {
+                if (!isset($value['role'])) {
+                    $value['role'] = $basicRole;
+                }
+                // We have all values now, add them to the return array:
+                $contributors[$value['role']][] = [
+                    'entity'  => 'person',
+                    'name'    => $value['name'],
+                    'role'    => $value['role'],
+                    'auth'    => null,
+                    'primary' => false
+                ];
+            }
+        }
+        
+        return $contributors;
+    }
+
 }
