@@ -116,7 +116,11 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @return bool
      */
     public function getOpenAccessData(): bool {
-        return $this->getMarcRecord()->getField(506) !== false;
+        $oa = $this->getMarcFieldsAsObject($this->getMarcRecord(), 506, null, null, ['f']);
+        if(isset($oa[0]->f) && strtolower($oa[0]->f) == "unrestricted online access") {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -479,6 +483,12 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $authors           = $this->mergeAuthorsAndRoles($primPers, $primRole);
         $authors2          = $this->mergeAuthorsAndRoles($secPers, $secRole);
         // Merge array
+        /*
+        echo '<pre>';
+        var_dump($authors);
+        var_dump($authors2);
+        echo '</pre>';
+        */
         $merged            = array_merge($authors, $authorsCorp, $primMeet, $authors2, $secCorp, $secMeet);
         $mergedWithOutRole = array_merge($primPers, $primCorp, $primMeet, $secPers, $secCorp, $secMeet);
 
