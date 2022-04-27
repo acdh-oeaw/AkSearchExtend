@@ -172,11 +172,14 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         //<-- Electronic holdings
         //    https://redmine.acdh.oeaw.ac.at/issues/19474
-        foreach ($this->getMarcFieldsAsObject($marc, 'AVE') as $ave) {
-            if (!empty($ave->x)) {
-                $holding = new HoldingData(new IlsHoldingId($ave->{0}));
-                $holding->items[] = ItemData::fromAve($ave);
-                $results['electronic_holdings'][] = $holding;
+        $ave = $this->getMarcFieldsAsObject($marc, 'AVE');
+        if(count($ave) > 0 ) {
+            foreach ($this->getMarcFieldsAsObject($marc, 'AVE') as $ave) {
+                if (!empty($ave->x)) {
+                    $holding = new HoldingData(new IlsHoldingId($ave->{0}));
+                    $holding->items[] = ItemData::fromAve($ave);
+                    $results['electronic_holdings'][] = $holding;
+                }
             }
         }
         //-->

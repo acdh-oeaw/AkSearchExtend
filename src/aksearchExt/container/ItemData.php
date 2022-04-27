@@ -47,10 +47,10 @@ class ItemData {
     static public function fromAve(object $ave): self {
         $data = new ItemData();
         $data->availability = true;
-        $data->url = $ave->x;
+        $data->url = ($ave->x) ? $ave->x : '';
         $data->mmsId = $ave->{0};
-        $data->description = $ave->P;
-        $data->status = $ave->b;
+        $data->description = ($ave->P) ? $ave->P : 'missing title';
+        $data->status = ($ave->b) ? $ave->b : '';
         return $data;
     }
     
