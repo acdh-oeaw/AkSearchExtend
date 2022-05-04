@@ -584,5 +584,65 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         
         return $contributors;
     }
+    
+    
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/20271
+     * 
+     * Add the subfield 0 and remove the , from the subfield join
+     * @param type $extended
+     * @return type
+     */
+    public function getAllSubjectHeadings($extended = false)
+    {
+        
+        $returnValue = [];
+        $subjectFields = $this->getMarcRecord()->getFields('689');
+
+        $ind1 = 0;
+        foreach($subjectFields as $subjectField) {
+            $ind1 = $subjectField->getIndicator(1);
+            $ind2 = $subjectField->getIndicator(2);
+
+            if (is_numeric($ind1) && is_numeric($ind2)) {
+                $subfields = $subjectField->getSubfields('[axvtyzbcgh0]', true);
+                $subfieldData = [];
+                foreach($subfields as $subfield) {
+                    $subfieldData[] = $subfield->getData();
+                }
+                $returnValue[$ind1][$ind2] = (join(' ', $subfieldData));
+            }
+        }
+
+        $subjectFields982  = $this->getMarcRecord()->getFields('982');
+        $fieldCount = $ind1+1;
+        foreach($subjectFields982 as $subjectField982) {
+            $ind1 = $subjectField982->getIndicator(1);
+            $ind2 = $subjectField982->getIndicator(2);
+            if (empty(trim($ind1)) && empty(trim($ind2))) {
+                
+                $subfields = $subjectField982->getSubfields('a', false);
+                if (!empty($subfields)) {
+                    $subfieldData = [];
+                    $tokenCount = 0;
+                    foreach($subfields as $subfield) {
+                        $subfieldContent = $subfield->getData();
+                        $tokens = preg_split("/\s+[\/-]\s+/", $subfieldContent);
+                        foreach($tokens as $token) {
+                            $returnValue[$fieldCount][$tokenCount] = $token;
+                            $tokenCount++;
+                        }
+                    }
+                    $fieldCount++;
+                }
+            }
+        }
+
+        $returnValue = array_map(
+            'unserialize', array_unique(array_map('serialize', $returnValue))
+        );
+
+        return $this->stripNonSortingChars($returnValue);
+    }
 
 }
