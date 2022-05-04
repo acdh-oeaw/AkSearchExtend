@@ -204,8 +204,6 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         $exemplerdata = array();
         foreach ($data as $name => $holding) {
-
-
             if (isset($holding['items'])) {
                 //$exemplerdata[$name];
                 foreach ($holding['items'] as $item) {
@@ -637,12 +635,56 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 }
             }
         }
-
         $returnValue = array_map(
             'unserialize', array_unique(array_map('serialize', $returnValue))
         );
-
         return $this->stripNonSortingChars($returnValue);
+    }
+    
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/19917
+     * 
+     * Get the record view subtitle
+     * @return string
+     */
+    public function getSubTitle(){
+        $marc       = $this->getMarcRecord();
+        $st = $this->getMarcFieldsAsObject($marc, 249, null, null, null);
+        
+        if(isset($st[0]->a[0]) && isset($st[0]->v[0])) {
+            return $st[0]->a[0].' / '.$st[0]->v[0];
+        }else if(isset($st[0]->a[0]) && !isset($st[0]->v[0])) { 
+            return $st[0]->a[0];
+        } else if(!isset($st[0]->a[0]) && isset($st[0]->v[0])) { 
+            return $st[0]->v[0];
+        }
+        
+        return '';
+    }
+    
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/19917
+     * 
+     * Get the Record view title
+     * @return type
+     */
+    public function getWholeTitle()
+    {
+        $field245C =  $this->getMarcFieldsAsObject($this->getMarcRecord(), 245, null, null, ['c']);
+        if(isset($field245C[0]->c)) {
+            $field245C = $field245C[0]->c;
+        }else {
+            $field245C = "";
+        }
+        // AK: Join the title and title section together. With array_filter we remove
+        // possible empty values.
+        return implode(
+            ' / ',
+            array_filter(
+                [trim($this->getTitle()), trim($this->getTitleSection()), $field245C],
+                array($this, 'filterCallback')
+            )
+        );
     }
 
 }
