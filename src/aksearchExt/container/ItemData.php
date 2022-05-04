@@ -82,7 +82,7 @@ class ItemData {
         $data->status       = $status;
         $data->location     = (string) $item->item_data->location;
         $data->callNumber   = (string) $item->holding_data->call_number;
-        $data->callNumber2  = (string) $item->holding_data->alternative_call_number;
+        $data->callNumber2  = (string) $item->item_data->alternative_call_number;
         $data->duedate      = $duedate;
         $data->notes        = (string) $item->item_data->public_note;
         $data->description  = (string) $item->item_data->description;
