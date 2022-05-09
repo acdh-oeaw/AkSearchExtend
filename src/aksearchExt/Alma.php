@@ -72,9 +72,11 @@ class Alma extends \VuFind\ILS\Driver\Alma {
         }
         ksort($libraries);
         foreach ($libraries as &$i) {
-            usort($i, fn($a, $b) => $a->orderBy <=> $b->orderBy);
+            // non-lkr first, within (non)lkr group by the orderBy property
+            usort($i, fn($a, $b) => $a->id->lkr !== $b->id->lkr ? $a->id->lkr <=> $b->id->lkr : $b->orderBy <=> $a->orderBy);
         }
         unset($i);
+        print_r($libraries);
 
         // get all items library by library and holding by holding
         $orderBy   = $this->config['Holdings']['itemsOrderBy'] ?? 'description,enum_a,enum_b';
@@ -128,7 +130,6 @@ class Alma extends \VuFind\ILS\Driver\Alma {
 
         // Electronic items are fetched from MARC in the record driver class
         // because Alma REST API doesn't return the URL
-
         //DEBUG: print_r($results);
         return $results;
     }

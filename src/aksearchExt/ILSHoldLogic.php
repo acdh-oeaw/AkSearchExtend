@@ -27,7 +27,6 @@
 namespace aksearchExt;
 
 use VuFind\Exception\ILS as ILSException;
-use VuFind\ILS\Connection as ILSConnection;
 
 /**
  * Description of ILSHoldLogic
@@ -61,6 +60,9 @@ class ILSHoldLogic extends \VuFind\ILS\Logic\Holds {
         $holdConfig = $this->catalog->checkFunction('Holds');
         foreach ($result['holdings'] as $holding) {
             foreach ($holding->items as $item) {
+                $item->link = $this->getRequestDetails($item->asVuFindArray(), $holdConfig['HMACKeys'], 'Hold');
+            }
+            foreach ($holding->lkrItems as $item) {
                 $item->link = $this->getRequestDetails($item->asVuFindArray(), $holdConfig['HMACKeys'], 'Hold');
             }
         }

@@ -27,7 +27,6 @@
 namespace aksearchExt\container;
 
 use SimpleXMLElement;
-use VuFind\I18n\TranslatableString;
 use aksearchExt\Alma;
 
 /**
@@ -47,10 +46,10 @@ class ItemData {
     static public function fromAve(object $ave): self {
         $data = new ItemData();
         $data->availability = true;
-        $data->url = ($ave->x) ? $ave->x : '';
+        $data->url = $ave->x ?? '';
         $data->mmsId = $ave->{0};
-        $data->description = ($ave->P) ? $ave->P : 'missing title';
-        $data->status = ($ave->b) ? $ave->b : '';
+        $data->description = $ave->P ?? 'missing title';
+        $data->status = $ave->b ?? '';
         return $data;
     }
     
