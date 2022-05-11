@@ -65,9 +65,11 @@ class Module {
                     'recordtab'    => [
                         'factories' => [
                             'aksearchExt\RecordTab\Exemplarspezifika' => 'VuFind\RecordTab\HoldingsILSFactory',
+                            'aksearchExt\RecordTab\HoldingsILS'  => 'VuFind\RecordTab\HoldingsILSFactory',
                         ],
                         'aliases'   => [
-                            'exemplarspezifika' => 'aksearchExt\RecordTab\Exemplarspezifika'
+                            'exemplarspezifika' => 'aksearchExt\RecordTab\Exemplarspezifika',
+                            'holdingsils' => 'aksearchExt\RecordTab\HoldingsILS',
                         ]
                     ],
                 ],

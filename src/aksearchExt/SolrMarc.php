@@ -116,8 +116,9 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @return bool
      */
     public function getOpenAccessData(): bool {
-        $oa = $this->getMarcFieldsAsObject($this->getMarcRecord(), 506, null, null, ['f']);
-        if(isset($oa[0]->f) && strtolower($oa[0]->f) == "unrestricted online access") {
+        $oa = $this->getMarcFieldsAsObject($this->getMarcRecord(), 506, null, null, [
+            'f']);
+        if (isset($oa[0]->f) && strtolower($oa[0]->f) == "unrestricted online access") {
             return true;
         }
         return false;
@@ -142,42 +143,54 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     }
 
     /**
+     * Collects all possible holding identifiers, including information required
+     * for LKR items filtering.
+     * 
+     * @return array<\aksearchExt\container\IlsHoldingId>
+     */
+    public function getHoldingIds(): array {
+        static $ids = [];
+        if (count($ids) === 0) {
+            $ids[] = new IlsHoldingId($this->getUniqueID());
+
+            $marc       = $this->getMarcRecord();
+            $lkrRecords = $this->getMarcFieldsAsObject($marc, 773, 1, 8, ['w']);
+            foreach ($lkrRecords as $lkrRecord) {
+                if (empty($lkrRecord->w) || empty($lkrRecord->g)) {
+                    continue;
+                }
+                $ctrlnum = preg_replace('/^.*[)]/', '', $lkrRecord->w);
+                $param   = new ParamBag(['fl' => 'id']);
+                $record  = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, $param)->first();
+                if ($record !== null) {
+                    // there might be many subfield g values (!)
+                    // for now we optimistically assume the prefix (which we skip using preg_replace())
+                    // doesn't count
+                    $ids[] = new IlsHoldingId($record->getRawData()['id'], null, preg_replace('/^.*:/', '', $lkrRecord->g), true);
+                }
+            }
+        }
+        return $ids;
+    }
+
+    /**
      * LKR:
      * - https://redmine.acdh.oeaw.ac.at/issues/14550
      * - https://redmine.acdh.oeaw.ac.at/issues/19566
      * 
      */
     public function getRealTimeHoldings() {
-        $ids   = [];
-        $ids[] = new IlsHoldingId($this->getUniqueID());
-
-        $marc       = $this->getMarcRecord();
-        $lkrRecords = $this->getMarcFieldsAsObject($marc, 773, 1, 8, ['w']);
-        foreach ($lkrRecords as $lkrRecord) {
-            if (empty($lkrRecord->w) || empty($lkrRecord->g)) {
-                continue;
-            }
-            $ctrlnum = preg_replace('/^.*[)]/', '', $lkrRecord->w);
-            $param   = new ParamBag(['fl' => 'id']);
-            $record  = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, $param)->first();
-            if ($record !== null) {
-                // there might be many subfield g values (!)
-                // for now we optimistically assume the prefix (which we skip using preg_replace())
-                // doesn't count
-                $ids[] = new IlsHoldingId($record->getRawData()['id'], null, preg_replace('/^.*:/', '', $lkrRecord->g), true);
-            }
-        }
-
-        $results = $this->holdLogic->getHoldings($ids);
+        $results = $this->holdLogic->getHoldings($this->getHoldingIds());
 
         //<-- Electronic holdings
         //    https://redmine.acdh.oeaw.ac.at/issues/19474
-        $ave = $this->getMarcFieldsAsObject($marc, 'AVE');
-        if(count($ave) > 0 ) {
+        $marc = $this->getMarcRecord();
+        $ave  = $this->getMarcFieldsAsObject($marc, 'AVE');
+        if (count($ave) > 0) {
             foreach ($this->getMarcFieldsAsObject($marc, 'AVE') as $ave) {
                 if (!empty($ave->x)) {
-                    $holding = new HoldingData(new IlsHoldingId($ave->{0}));
-                    $holding->items[] = ItemData::fromAve($ave);
+                    $holding                          = new HoldingData(new IlsHoldingId($ave->{0}));
+                    $holding->items[]                 = ItemData::fromAve($ave);
                     $results['electronic_holdings'][] = $holding;
                 }
             }
@@ -324,7 +337,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         if ($primaryName !== null) {
             $authors = $this->createSecondaryAuthors($primaryName, $primaryRole);
         }
-       
+
         // Get primary corporate author
         $corpName = $this->fields['author_corporate'][0] ?? null;
         $corpRole = $this->fields['author_corporate_role'][0] ?? null;
@@ -370,20 +383,20 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 'primary' => true
             ];
         }
-        
+
         // Add primary person authors to array (values from Marc21 field 700)
         $authorsArray = array_merge_recursive($this->addAuthorsToContributorsArray($authors), $this->addAuthorsToContributorsArray($authors2));
         $contributors = array_merge_recursive($contributors, $authorsArray);
-        
+
         // Add secondary corporation authors to array (values from Marc21 field 710)
-        if($secCorps){
+        if ($secCorps) {
             $this->getSecondaryAuthorData($contributors, $secCorps, 'corporation');
         }
         // Add secondary meeting authors to array (values from Marc21 field 711)
-        if($secMeetings) {
+        if ($secMeetings) {
             $this->getSecondaryAuthorData($contributors, $secMeetings, 'meeting');
         }
-        
+
         $this->removeContributorDuplicates($contributors);
         return $contributors;
     }
@@ -395,8 +408,9 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @param string $entity
      * @return array
      */
-    private function getSecondaryAuthorData(array &$contributors, array $data, string $entity): array {
-         if (count($data) > 0 ) {
+    private function getSecondaryAuthorData(array &$contributors, array $data,
+                                            string $entity): array {
+        if (count($data) > 0) {
             foreach ($data as $key => $value) {
                 if (($key % 3) == 0) { // First of 3 values
                     $name = $value;
@@ -417,20 +431,19 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             }
         }
         return $contributors;
-
     }
-    
+
     /**
      * Remove the duplicates from the authors array
      * @param array $contributors
      * @return array
      */
     private function removeContributorDuplicates(array &$contributors): array {
-        foreach($contributors as $k => $v) {
+        foreach ($contributors as $k => $v) {
             $names = [];
-            foreach($v as $ok => $ov) {
-                if(count($names) > 0 ) {
-                    if(in_array($ov['name'], $names)) {
+            foreach ($v as $ok => $ov) {
+                if (count($names) > 0) {
+                    if (in_array($ov['name'], $names)) {
                         unset($contributors[$k][$ok]);
                     } else {
                         $names[] = $ov['name'];
@@ -442,7 +455,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         }
         return $contributors;
     }
-    
+
     /**
      * Create the MARC 700 field authors for the gui core-phtml
      * @param type $names
@@ -485,11 +498,11 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $authors2          = $this->mergeAuthorsAndRoles($secPers, $secRole);
         // Merge array
         /*
-        echo '<pre>';
-        var_dump($authors);
-        var_dump($authors2);
-        echo '</pre>';
-        */
+          echo '<pre>';
+          var_dump($authors);
+          var_dump($authors2);
+          echo '</pre>';
+         */
         $merged            = array_merge($authors, $authorsCorp, $primMeet, $authors2, $secCorp, $secMeet);
         $mergedWithOutRole = array_merge($primPers, $primCorp, $primMeet, $secPers, $secCorp, $secMeet);
 
@@ -508,21 +521,22 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     private function mergeAuthorsAndRoles($names, $roles): array {
         $authors = array();
         foreach ($names as $key1 => $value1) {
-            if(count($authors) > 0) {
-                foreach($authors as $ak => $av) {
-                    if($av['name'] == $value1) {
+            if (count($authors) > 0) {
+                foreach ($authors as $ak => $av) {
+                    if ($av['name'] == $value1) {
                         $authors[$ak]['role'][] = $roles[$key1];
                     } else {
-                     $authors[$key1] = array("name" => $value1, "role" => array($roles[$key1]));   
+                        $authors[$key1] = array("name" => $value1, "role" => array(
+                                $roles[$key1]));
                     }
                 }
-            }else {
+            } else {
                 $authors[$key1] = array("name" => $value1, "role" => array($roles[$key1]));
             }
         }
         return $this->mergeRolesForSearchView($authors);
     }
-    
+
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/19499
      * @param type $names
@@ -531,13 +545,12 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      */
     private function mergeRolesForSearchView(array $authors) {
         $result = [];
-        foreach($authors as $k => $v) {
-            $result[$k] = $v['name'].' [ '.implode(", ", $v["role"]).' ]';
+        foreach ($authors as $k => $v) {
+            $result[$k] = $v['name'] . ' [ ' . implode(", ", $v["role"]) . ' ]';
         }
         return $result;
     }
-    
-    
+
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/14549
      * 
@@ -545,25 +558,24 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @return array
      */
     public function getExtraDescriptionData(): array {
-        $marc    = $this->getMarcRecord();
+        $marc  = $this->getMarcRecord();
         $value = $this->getMarcFieldsAsObject($marc, '245', null, null);
-        
+
         $return = array();
-        if(count($value) > 0) {
-            foreach($value as $v) {
-                if(isset($v->c)) {
+        if (count($value) > 0) {
+            foreach ($value as $v) {
+                if (isset($v->c)) {
                     $return[] = $v->c;
                 }
-            }            
-        }   
+            }
+        }
         return $return;
-
     }
 
     private function addAuthorsToContributorsArray(array $authors): array {
         $contributors = [];
         if (count($authors) > 0) {
-        
+
             $basicRole = $authors[0]['role'];
             foreach ($authors as $value) {
                 if (!isset($value['role'])) {
@@ -579,11 +591,10 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 ];
             }
         }
-        
+
         return $contributors;
     }
-    
-    
+
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/20271
      * 
@@ -591,42 +602,41 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @param type $extended
      * @return type
      */
-    public function getAllSubjectHeadings($extended = false)
-    {
-        
-        $returnValue = [];
+    public function getAllSubjectHeadings($extended = false) {
+
+        $returnValue   = [];
         $subjectFields = $this->getMarcRecord()->getFields('689');
 
         $ind1 = 0;
-        foreach($subjectFields as $subjectField) {
+        foreach ($subjectFields as $subjectField) {
             $ind1 = $subjectField->getIndicator(1);
             $ind2 = $subjectField->getIndicator(2);
 
             if (is_numeric($ind1) && is_numeric($ind2)) {
-                $subfields = $subjectField->getSubfields('[axvtyzbcgh0]', true);
+                $subfields    = $subjectField->getSubfields('[axvtyzbcgh0]', true);
                 $subfieldData = [];
-                foreach($subfields as $subfield) {
+                foreach ($subfields as $subfield) {
                     $subfieldData[] = $subfield->getData();
                 }
                 $returnValue[$ind1][$ind2] = (join(' ', $subfieldData));
             }
         }
 
-        $subjectFields982  = $this->getMarcRecord()->getFields('982');
-        $fieldCount = $ind1+1;
-        foreach($subjectFields982 as $subjectField982) {
+        $subjectFields982 = $this->getMarcRecord()->getFields('982');
+        $fieldCount       = $ind1 + 1;
+        foreach ($subjectFields982 as $subjectField982) {
             $ind1 = $subjectField982->getIndicator(1);
             $ind2 = $subjectField982->getIndicator(2);
             if (empty(trim($ind1)) && empty(trim($ind2))) {
-                
+
                 $subfields = $subjectField982->getSubfields('a', false);
                 if (!empty($subfields)) {
                     $subfieldData = [];
-                    $tokenCount = 0;
-                    foreach($subfields as $subfield) {
+                    $tokenCount   = 0;
+                    foreach ($subfields as $subfield) {
                         $subfieldContent = $subfield->getData();
-                        $tokens = preg_split("/\s+[\/-]\s+/", $subfieldContent);
-                        foreach($tokens as $token) {
+                        $tokens          = preg_split("/\s+[\/-]\s+/", $subfieldContent);
+                        foreach ($tokens as $token) {
                             $returnValue[$fieldCount][$tokenCount] = $token;
                             $tokenCount++;
                         }
@@ -640,40 +650,40 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         );
         return $this->stripNonSortingChars($returnValue);
     }
-    
+
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/19917
      * 
      * Get the record view subtitle
      * @return string
      */
-    public function getSubTitle(){
-        $marc       = $this->getMarcRecord();
-        $st = $this->getMarcFieldsAsObject($marc, 249, null, null, null);
-        
-        if(isset($st[0]->a[0]) && isset($st[0]->v[0])) {
-            return $st[0]->a[0].' / '.$st[0]->v[0];
-        }else if(isset($st[0]->a[0]) && !isset($st[0]->v[0])) { 
+    public function getSubTitle() {
+        $marc = $this->getMarcRecord();
+        $st   = $this->getMarcFieldsAsObject($marc, 249, null, null, null);
+
+        if (isset($st[0]->a[0]) && isset($st[0]->v[0])) {
+            return $st[0]->a[0] . ' / ' . $st[0]->v[0];
+        } else if (isset($st[0]->a[0]) && !isset($st[0]->v[0])) {
             return $st[0]->a[0];
-        } else if(!isset($st[0]->a[0]) && isset($st[0]->v[0])) { 
+        } else if (!isset($st[0]->a[0]) && isset($st[0]->v[0])) {
             return $st[0]->v[0];
         }
-        
+
         return '';
     }
-    
+
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/19917
      * 
      * Get the Record view title
      * @return type
      */
-    public function getWholeTitle()
-    {
-        $field245C =  $this->getMarcFieldsAsObject($this->getMarcRecord(), 245, null, null, ['c']);
-        if(isset($field245C[0]->c)) {
+    public function getWholeTitle() {
+        $field245C = $this->getMarcFieldsAsObject($this->getMarcRecord(), 245, null, null, [
+            'c']);
+        if (isset($field245C[0]->c)) {
             $field245C = $field245C[0]->c;
-        }else {
+        } else {
             $field245C = "";
         }
         // AK: Join the title and title section together. With array_filter we remove
@@ -682,9 +692,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             ' / ',
             array_filter(
                 [trim($this->getTitle()), trim($this->getTitleSection()), $field245C],
-                array($this, 'filterCallback')
+                                               array($this, 'filterCallback')
             )
         );
     }
-
 }

@@ -33,6 +33,24 @@ use aksearchExt\container\ItemData;
 
 class Alma extends \VuFind\ILS\Driver\Alma {
 
+    public function hasHoldings($ids): bool {
+        if (!is_array($ids)) {
+            return false;
+        }
+        
+        foreach ($ids as $id) {
+            try {
+                $holdings = $this->makeRequest('/bibs/' . rawurldecode($id->mmsId) . '/holdings');
+                if (count($holdings->holding ?? []) > 0){
+                    return true;
+                }
+            } catch (\VuFind\Exception\ILS $e) {
+                
+            }
+        }
+        return false;
+    }
+
     /**
      * See docs/holdings.md
      * 
@@ -76,7 +94,6 @@ class Alma extends \VuFind\ILS\Driver\Alma {
             usort($i, fn($a, $b) => $a->id->lkr !== $b->id->lkr ? $a->id->lkr <=> $b->id->lkr : $b->orderBy <=> $a->orderBy);
         }
         unset($i);
-        print_r($libraries);
 
         // get all items library by library and holding by holding
         $orderBy   = $this->config['Holdings']['itemsOrderBy'] ?? 'description,enum_a,enum_b';
