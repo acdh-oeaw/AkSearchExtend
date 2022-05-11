@@ -2,23 +2,39 @@
 
 ## Call stack
 
-* The template (`templates/RecordTab/holdingsils.phtml`) calls `{recordDriver}::getRealTimeHoldings()`.  
-  Both in VuFind and AkSearch this data is already grouped by location.  
-  This data may also contain another artifacts (e.g. the AkSearch computes summary per location).
-  * `aksearchExt\SolcMarc::getRealTimeHoldings()` calls `{holdLogic}::getHoldings()`  
-    In vanila VuFind nothing's really going on here.  
-    In our case that's where additional **LKR holdings retrieval** is handled ([#19566](https://redmine.acdh.oeaw.ac.at/issues/19566))
-    as well as **electronic porfolios URLs** are set ([#19474](https://redmine.acdh.oeaw.ac.at/issues/19474)) (as the URL is only provided in MARC)
-  * `VuFind\ILS\Logic\Holds::getHoldings()`:
-    * calls `{ilsConnection}::getHolding()` which handles paging options and calls `{ilsDriver}::getHolding()`
-        * `aksearchExt\Alma::getHolding()` fetches holdings list from the Alma REST API.  
-          We had to override the original method so first, all fields from the response important to us were preserved (see the LKR)
-          and second, holding summary data is generated.
-    * calls `VuFind\ILS\Logic\Holds::generateHoldings()` on data returned by the `{ilsDriver}::getHolding()`.  
-      `VuFind\ILS\Logic::generateHoldings()` groups holdings list by the `{config/vufind/config.ini}[Catalog].holdings_grouping`
-    * calls `VuFind\ILS\Logic\Holds::processStorageRetrievalRequests()` and `VuFind\ILS\Logic::processILLRequests()`
-      which set item properties connected to the order/cancel button handling
-* The template (`templates/RecordTab/holdingsils.phtml`) and renders its output.
+### General workflow:
+
+* [1a] `templates/RecordTab/holdingsils.phtml` template calls `{recordDriver}::getRealTimeHoldings()`
+  * [2a] `{recordDriver}::getRealTimeHoldings()` calls `{IlsHoldsLogic}::getHoldings()`
+    * [3a] `{IlsHoldsLogic}::getHoldings()` calls `{IlsConnection}::getHolding()`
+      * [4] `{IlsConnection}::getHolding()` calls `{IlsDriver}::getHolding()`
+        * [5] `{IlsDriver}::getHolding()` reads items data from the ILS (Alma) API
+    * [3b] `{IlsHoldsLogic}::getHoldings()` runs a lot of logic (items grouping, hold/recall links generation, data format sanitation)
+  * [2b] `{recordDriver}::getRealTimeHoldings()` returns data
+* [1b] `templates/RecordTab/holdingsils.phtml` renders holdings and items
+
+### Detailed workflow
+
+| Stage | Vanilla | aksearch-ext | remarks |
+|-------|---------|--------------|---------|
+| 1a    | `templates/RecordTab/holdingsils.phtml` calls `{recordDriver}::getRealTimeHoldings()` | Same as in vanilla. | |
+| 2a    |         | `aksearchExt\SolrMarc::getRealTimeHoldings()` collects id data of the record and connected LKR records storing them in `array<aksearcExt\container\IlsHoldingId>` | |
+| 2a    | `{recordDriver}::getRealTimeHoldings()` calls `VuFind\ILS\Logic\Holds::getHoldings(int $recordId)` | `aksearchExt\SolrMarc::getRealTimeHoldings()` calls `aksearchExt\ILSHoldLogic::getHoldings(array<aksearcExt\container\IlsHoldingId> $ids)` | |
+| 3a    | `VuFind\ILS\Logic\Holds::getHoldings()` runs quite some logic around testing ILS driver capabilities, handling consortial holdings (something unknown to the Alma driver). | Dropped as we know exactly which driver we use and what it can do. | |
+| 3a    | `VuFind\ILS\Logic\Holds::getHoldings()` calls `{IlsConnection}::getHolding()` | Same as in vanilla (just the call is made by `aksearchExt\ILSHoldLogic::getHoldings()`). | |
+| 4     | `VuFind\ILS\Connection::getHolding()` prepares paging options to be passed to `{IlsDriver}::getHolding()` | `VuFind\ILS\Connection::getHolding()` prepares paging options to be passed to `aksearchExt\Alma::getHolding()` | |
+| 4     | `VuFind\ILS\Connection::getHolding()` calls `VuFind\ILS\Driver\Alma::getHolding()` | `VuFind\ILS\Connection::getHolding()` calls `aksearchExt\Alma::getHolding(array<aksearcExt\container\IlsHoldingId>, null, $pagingOptions)` | |
+| 5     | `VuFind\ILS\Driver\Alma::getHolding()` makes a request to the Alma's `{recordId}/holdings/ALL/items` endpoint (with the sorting hardcoded as `order_by=library,location,enum_a,enum_b&direction=desc` and paging as passed in the `$options` parameter) and for each reported item creates an associative array representing the item gathering this data in `$results['holdings']`.   | For each `aksearcExt\container\IlsHoldingId` passed to it the `aksearchExt\Alma::getHolding()` queries the Alma holdings API and collects the list of library and location codes for each holding. Then it sorts this list by the library code, LKR status (LKR holdings go last) and location code (the order requested by BAS:IS). Then it iterates over the sorted list of holdings calling the Alma items API for each of them. For LKR holdings, the items list is filtered with the `aksearchExt\Alma::filterLkr()` (which modifies the response in-place preserving its structure) and the logic for non-itemized holdings is also applied here. All holdings are traversed (and not only the requested page) because for the paging we need to know the total number of items in all holdings. Nevertheless the `aksearchExt\container\HoldingData` objects are created only for holdings on the current page (this involves calls to Alma holding API being made by `aksearchExt\Alma::fillHoldingData()`). Similarly `aksearchExt\container\ItemData` objects are created only for items on the requested page (using the `aksearchExt\container\ItemData::fromAlma()`). They are collected in corresponding holding's `items` and `lkrItems` properties. Finally `array<aksearchExt\container\HoldingData>` is returned. | The Alma items API applies sorting **after** paging and limits the `limit` parameter to 100. |
+| 5     | `VuFind\ILS\Driver\Alma::getHolding()` calls `VuFind\ILS\Driver\Alma::getStatusesForInventoryTypes()` which makes a request to the Alma's `{recordId}/bibs` using the `expand={Alma.ini[Holdings]inventoryTypes mapped with VuFind\ILS\Driver\Alma::getInventoryTypes()}` query parameter. The returned data contain MARC record including information on physical/digitial/electronic items in additional `AVA`/`AVE`/`AVD` MARC fields, respectively. For each reported item `VuFind\ILS\Driver\Alma::getStatusesForInventoryTypes()` creates a simple data array (with only subset of fields created for the items fetched from the `{recordId}/holdings/ALL/items` endpoint) and returns them in an array `[{recordId} => [$item1, $item2, ...]]`. Finally `VuFind\ILS\Driver\Alma::getHolding()` saves this array as `$results['electronic_holdings']` | This has been moved to `aksearchExt\SolrMarc::getRealTimeHoldings()` where same data are read from the local MARC without a need for another Alma REST API call. | |
+| 5     | `VuFind\ILS\Driver\Alma::getHolding()` returns item data as an array `['total' => int, 'holdings' => array<array<itemProperty, value>>, 'electronic_holdings' => array<array<itemProperty, value>>]` | `aksearchExt\Alma::getHolding()` returns item data as an array `['total' => int, 'holdings' => array<aksearchExt\container\HoldingData>, 'electronic_holdings' => []]` | |
+| 3b    | `VuFind\ILS\Connection::getHolding()` sanitizes the array returned by the `{IlsDriver}::getHolding()` assuring they contain all required keys. | Same as in vanilla. | |
+| 3b    | Depending on `config.ini[Catalog]holds_mode` the `VuFind\ILS\Logic\Holds::getHoldings()` chooses if and how to generate the hold/recall item links and executes appropiate code (`VuFind\ILS\Logic\Holds::standardHoldings()`, `VuFind\ILS\Logic\Holds::driverHoldings()` or `VuFind\ILS\Logic\Holds::generateHoldings()`). These methods are also responsible for hiding items from banned locations (read from a config property we didn't track down) and grouping them by the `config.ini[Catalog]holdings_grouping` property (so the result's `holdings` property is `array<string $groupName, array<array<itemProperty, value>>>`). | `aksearchExt\ILSHoldLogic::getHoldings()` iterates trough all `aksearchExt\container\ItemData` objects contained in the data returned by `aksearchExt\Alma::getHolding()` (embedded in `['holdings'][i]->items` and `['holdings'][i]->lkrItems`) and sets the `aksearchExt\container\ItemData::link` property to object created with the `\VuFind\ILS\Logic\Holds::getRequestDetails()`. Information contained in these objects are used in the template to create hold request/release buttons. This is what `config.ini[Catalog]holds_mode = all` (the default setting) would do in the vanilla. Our version doesn't do the grouping because items are already grouped (by holding and split into non-LKR and LKR ones) and ordered properly by the `aksearchExt\Alma::getHolding()`. | |
+| 3b    | `VuFind\ILS\Logic\Holds::getHoldings()` runs storage retrieval requests logic (`VuFind\ILS\Logic\Holds::processStorageRetrievalRequests()`, not supported by the Alma driver) and ILL requests logic (`VuFind\ILS\Logic\Holds::processILLRequests()`, not supported by the Alma driver). | Dropped as the Alma driver doesn't support them. | |
+| 3b    | `VuFind\ILS\Logic\Holds::getHoldings()` sanitizes items data a little using ``VuFind\ILS\Logic\Holds::formatHoldings()`. | Dropped - in our approach holding/item data is sanitized already at the  `aksearchExt\container\HoldingData`/`aksearchExt\container\ItemData` objects construction time. | |
+| 3b    | `VuFind\ILS\Logic\Holds::getHoldings()` returns item data as an array `['total' => int, 'holdings' => array<string $group, array<array<itemProperty, value>>>, 'electronic_holdings' => array<array<itemProperty, value>>]` | `aksearchExt\ILSHoldLogic::getHoldings()` returns item data as an array `['total' => int, 'holdings' => array<aksearchExt\container\HoldingData>, 'electronic_holdings' => []]` | |
+| 2b    | | `aksearchExt\SolrMarc::getRealTimeHoldings()` extracts electronic items data from MARC `AVE` fields, creates corresponding `aksearchExt\container\HoldingData` objects and collects them in `$results['electronic_holdings']` (where `$results` is data returned by the `aksearchExt\ILSHoldLogic::getHoldings()`) | |
+| 2b    | `{recordDriver}::getRealTimeHoldings()` directly passes `VuFind\ILS\Logic\Holds::getHoldings()` return value to the template.  | `aksearchExt\SolrMarc::getRealTimeHoldings()` returns items data (in the same structure as returned by the `aksearchExt\ILSHoldLogic::getHoldings()`) to the template | |
+| 1b    | `templates/RecordTab/holdingsils.phtml` template renders holdings and items | Same as in vanilla (but of course we use an adjusted template). | |
 
 ## Design considerations
 
@@ -83,9 +99,9 @@ Fortunately all of these classes can be overridden with the module config:
     `{config/vufind/config.ini}[Catalog].holdings_grouping` being fixed to `group`.
   * Can be done by setting `{config/vufind/Alma.ini}[Catalog].holdings_grouping` to `holding_id` or `library`.
   * LKR holdings should be treated as separate ones, even if they share same `holding_id` with the normal ones.
-    Therefore `aksearchExt\SolcMarc::getRealTimeHoldings()` should gather the under dedicated properties 
+    Therefore `aksearchExt\SolrMarc::getRealTimeHoldings()` should gather the under dedicated properties 
     (`lkrHoldingsSummary` and `lkrItems` in the dataset it returns)
-* From the template side - for every group in `aksearchExt\SolcMarc::getRealTimeHoldings()['holdings']`:
+* From the template side - for every group in `aksearchExt\SolrMarc::getRealTimeHoldings()['holdings']`:
   * If the library of the group differs from previous group's library, display the library name.
     (take library either from `$group['items'][0]['library']` or when it's empty `$group['lkrItems'][0]['library']`)
   * Display all holding summaries for a given group. Each summary is a separate table with following rows:
