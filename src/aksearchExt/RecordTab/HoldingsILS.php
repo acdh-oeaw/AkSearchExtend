@@ -34,6 +34,11 @@ namespace aksearchExt\RecordTab;
 class HoldingsILS extends \VuFind\RecordTab\HoldingsILS {
 
     public function isActive(): bool {
-        return ($this->catalog && $this->hideWhenEmpty) ? $this->catalog->hasHoldings($this->driver->getHoldingIds()) : true;
+        if ($this->driver->hasElectronicHoldings()) {
+            return true;
+        } elseif ($this->catalog && $this->hideWhenEmpty) {
+            return $this->catalog->hasHoldings($this->driver->getHoldingIds());
+        }
+        return true;
     }
 }

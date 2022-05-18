@@ -179,7 +179,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * - https://redmine.acdh.oeaw.ac.at/issues/19566
      * 
      */
-    public function getRealTimeHoldings() {
+    public function getRealTimeHoldings(): array {
         $results = $this->holdLogic->getHoldings($this->getHoldingIds());
 
         //<-- Electronic holdings
@@ -200,8 +200,21 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         return $results;
     }
 
+    public function hasElectronicHoldings(): bool {
+        $marc = $this->getMarcRecord();
+        $ave  = $this->getMarcFieldsAsObject($marc, 'AVE');
+        if (count($ave) > 0) {
+            foreach ($this->getMarcFieldsAsObject($marc, 'AVE') as $ave) {
+                if (!empty($ave->x)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     /**
-     * Display Exemplarbeschreibung and Ex Libris data on the holdingss tab
+     * Display Exemplarbeschreibung and Ex Libris data on the holdings tab
      * https://redmine.acdh.oeaw.ac.at/issues/19506
      */
     public function getHolding991992() {
