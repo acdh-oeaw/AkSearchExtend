@@ -673,16 +673,30 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     public function getSubTitle() {
         $marc = $this->getMarcRecord();
         $st   = $this->getMarcFieldsAsObject($marc, 249, null, null, null);
-
-        if (isset($st[0]->a[0]) && isset($st[0]->v[0])) {
-            return $st[0]->a[0] . ' / ' . $st[0]->v[0];
-        } else if (isset($st[0]->a[0]) && !isset($st[0]->v[0])) {
-            return $st[0]->a[0];
-        } else if (!isset($st[0]->a[0]) && isset($st[0]->v[0])) {
-            return $st[0]->v[0];
+        $str = "";
+        
+        foreach($st as $k => $v) {
+            if(isset($v->a) && isset($v->v)) {
+               
+                array_map(function($a, $b) use (&$str) {
+                    if(!empty($a) && !empty($b)) {
+                        $str .= $a.' ('.$b.')<br>';
+                    } else if (!empty($a)) {
+                        $str .= $a.'<br>';
+                    }
+                }, $v->a, $v->v);
+            
+            } else if (isset($v->a)) {
+              array_map(function($a) use (&$str) {
+                   if (!empty($a)) {
+                        $str .= $a.'<br>';
+                    }
+                }, $v->a);
+            }
         }
+       
 
-        return '';
+        return $str;
     }
 
     /**
@@ -699,6 +713,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         } else {
             $field245C = "";
         }
+        
         // AK: Join the title and title section together. With array_filter we remove
         // possible empty values.
         return implode(
@@ -709,4 +724,54 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             )
         );
     }
+    
+    
+    /**
+     * Get the full title of the record.
+     * 
+     * AK: Separate by colon
+     *
+     * @return string
+     */
+    public function getTitle()
+    {
+        $matches = $this->getFieldArray('245', ['a', 'b'], true, ' : ');
+        return (is_array($matches) && count($matches) > 0) ?
+            $this->stripNonSortingChars($matches[0]) : null;
+    }
+    
+    /**
+     * 
+     * @return string
+     */
+    public function getTitleAddition(): string
+    {
+        $str = "";
+        $field = $this->getFieldsByKeysAndField($this->getMarcRecord(), ['b'], '249');
+        
+        if(count($field['b']) > 0) {
+            foreach($field['b'] as $f ) {
+                $str .= $f;
+            }
+        }
+       return $str;
+    }
+    
+    /**
+     * 
+     * @return string
+     */
+    public function getStatementOfResponsibility(): string
+    {
+       $str = "";
+        $field = $this->getFieldsByKeysAndField($this->getMarcRecord(), ['c'], '249');
+       
+        if(count($field['c']) > 0) {
+            foreach($field['c'] as $f ) {
+                $str .= $f;
+            }
+        }
+       return $str;
+    }
+    
 }
