@@ -275,7 +275,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             foreach ($keys as $k) {
                 $values[$k] = [];
                 if (!empty($field->$k)) {
-                    $values[$k][] = $field->$k . ';<br>';
+                    $values[$k][] = $field->$k . '<br/>';
                 }
             }
         }
@@ -680,16 +680,16 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                
                 array_map(function($a, $b) use (&$str) {
                     if(!empty($a) && !empty($b)) {
-                        $str .= $a.' ('.$b.')<br>';
+                        $str .= $a.' ('.$b.')<br/>';
                     } else if (!empty($a)) {
-                        $str .= $a.'<br>';
+                        $str .= $a.'<br/>';
                     }
                 }, $v->a, $v->v);
             
             } else if (isset($v->a)) {
               array_map(function($a) use (&$str) {
                    if (!empty($a)) {
-                        $str .= $a.'<br>';
+                        $str .= $a.'<br/>';
                     }
                 }, $v->a);
             }
@@ -748,7 +748,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     {
         $str = "";
         $field = $this->getFieldsByKeysAndField($this->getMarcRecord(), ['b'], '249');
-        
+       
         if(count($field['b']) > 0) {
             foreach($field['b'] as $f ) {
                 $str .= $f;

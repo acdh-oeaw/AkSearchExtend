@@ -43,11 +43,11 @@ class RecordDataFormatterFactory extends \AkSearch\View\Helper\Root\RecordDataFo
         $spec = new \VuFind\View\Helper\Root\RecordDataFormatter\SpecBuilder();
 
         $spec->setTemplateLine(
-            'Titelzusatz zur gesamten Vorlage', 'getTitleAddition', 'data-titleAddition.phtml'
+            'Title supplement to the whole collection', 'getTitleAddition', 'data-titleAddition.phtml'
         );
         
         $spec->setTemplateLine(
-            'Verantwortlichkeitsangabe zur gesamten Vorlage', 'getStatementOfResponsibility', 'data-statementOfResponsibility.phtml'
+            'Statement of responsibility for the whole collection', 'getStatementOfResponsibility', 'data-statementOfResponsibility.phtml'
         );
          
         // AK: Getting parent records with direct link to the parent records detail
