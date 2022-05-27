@@ -717,7 +717,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         return implode(
                 ' / ',
                 array_filter(
-                        [trim($this->getTitle880()), trim($this->getTitle()), trim($this->getTitleSection()), $field245C],
+                        [trim($this->getTitle()), trim($this->getTitleSection()), $field245C],
                         array($this, 'filterCallback')
                 )
         );
@@ -731,18 +731,18 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @return string
      */
     public function getTitle() {
-        
+
         $matches = $this->getFieldArray('245', ['a', 'b'], true, ' : ');
         $title880 = $this->getTitle880();
         $str = "";
         //if we have 880 title then we fetch that first
-        if(!empty($title880)) {
+        if (!empty($title880)) {
             $str .= $title880;
         }
-        
-        if(is_array($matches) && count($matches) > 0) {
-            if(!empty($str)) {
-                $str .= ' / ';
+
+        if (is_array($matches) && count($matches) > 0) {
+            if (!empty($str)) {
+                $str .= '<br/>';
             }
             $str .= $this->stripNonSortingChars($matches[0]);
         }
@@ -756,20 +756,30 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      */
     private function getTitle880() {
         //first check if the actual 245 has a field 6, if yes then we fetch the 880
-        $field245_6 = $this->getFieldArray('245', ['6',], true, '');
-
-        $field2456_880 = array_filter($field245_6, function ($value) {
-            return strpos($value, '880-') !== false;
-        });
-        
-        if(count($field2456_880) > 0) {
-            $field880 = $this->getFieldArray('880', ['a', 'b', 'c'], true, '');
-            if(count($field880) > 0 ) {
-                return implode(' / ', $field880);
+        $field880 = $this->getMarcFieldsAsObject($this->getMarcRecord(), 880, null, null, null);
+        $str = "";
+        $fchk = ['a', 'b', 'c'];
+        $fields = [];
+        foreach ($field880 as $k => $val) {
+            $f = 6;
+            if (isset($val->$f)) {
+                foreach ($val->$f as $v) {
+                    if (strpos($v, '245-') !== false) {
+                        $fields[] = $k;
+                    }
+                }
             }
         }
 
-        return '';
+        foreach ($fields as $f) {
+            foreach ($fchk as $fc) {
+                if (isset($field880[$f]->$fc)) {
+                    $str .= implode(' / ', $field880[$f]->$fc);
+                }
+            }
+
+        }
+        return $str;
     }
 
     /**
