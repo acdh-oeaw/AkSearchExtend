@@ -273,9 +273,11 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $values = [];
         foreach ($this->getMarcFieldsAsObject($marc, $field, null, null) as $field) {
             foreach ($keys as $k) {
-                $values[$k] = [];
                 if (!empty($field->$k)) {
                     $values[$k][] = $field->$k . '<br/>';
+                }else {
+                    //we have to add an empty result because we need the same amount of values for each field
+                    $values[$k][] = '';
                 }
             }
         }
@@ -777,7 +779,6 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                     $str .= implode(' / ', $field880[$f]->$fc);
                 }
             }
-
         }
         return $str;
     }
@@ -814,6 +815,142 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             }
         }
         return $str;
+    }
+
+    /**
+     * Get publication details from 264 fields. This function take several variants
+     * of subfield notation into account, like e. g. multiple subfields a and b.
+     * 
+     * For these special cases in austrian libraries, see:
+     * https://wiki.obvsg.at/Katalogisierungshandbuch/Kategorienuebersicht264FE
+     * 
+     * ACDH-CH
+     * https://redmine.acdh.oeaw.ac.at/issues/19490#264
+     * @return array
+     */
+    public function getPublicationDetailsAut() {
+        // Create result array as return value
+        $result = [];
+
+        // Get all fields 264 and add their data to an easy-to-process array
+        $fs264 = $this->getFieldsAsArray('264');
+        
+        // Iterate over each field 264
+        foreach ($fs264 as $f264) {
+            $subfieldResult = [];
+
+            // Get subfields
+            $subfs = $f264['subfs'];
+
+            // Array columns of subfields a, b and c            
+            $subfsA = array_column($subfs, 'a');
+            $subfsB = array_column($subfs, 'b');
+            $subfsC = array_column($subfs, 'c');
+            $subfs6 = array_column($subfs, '6');
+
+            $field880_6 = $this->fetchOrtVerlagAdditionalData($subfs6[0]);
+            
+            // Join subfields c (= dates) to a string
+            $dates = (!empty($subfsC)) ? join(', ', $subfsC) : null;
+
+            // Check if subfields a and b exists
+            if (!empty($subfsA) && !empty($subfsB)) {
+
+                // Create pairs of subfields a (= place) and b (= publisher name) if
+                // their counts are the same. The result is a colon separated string
+                // like: "Place : Publisher Name"
+                if (count($subfsA) === count($subfsB)) {
+                    $size = count($subfsA);
+                    for ($i = 0; $i < $size; $i++) {
+                        $subfieldResult[] = $subfsA[$i] . ' : ' . $subfsB[$i];
+                    }
+                } else {
+                    // If the count is of subfields a and b is not the same, just
+                    // join them separately and then join them again, separated by
+                    // a colon.
+                    $subfieldResult[] = join(', ', $subfsA) . ' : ' . join(', ',
+                                    $subfsB);
+                }
+            } else {
+                // If subfield a or b doesn't exist, join just the existing one
+                if (!empty($subfsA)) {
+                    $subfieldResult[] = join(', ', $subfsA);
+                }
+                if (!empty($subfsB)) {
+                    $subfieldResult[] = join(', ', $subfsB);
+                }
+            }
+
+            // If dates exist, add them as last item to the array            
+            if ($dates != null) {
+                $subfieldResult[] = $dates;
+            }
+
+            $finalData = join(', ', $subfieldResult);
+            if(!empty($field880_6)) {
+                $finalData = $field880_6.'<br/>'.$finalData;
+            }
+            
+            // Create result array if we have results
+            if (!empty($subfieldResult)) {
+                $result[] = [
+                    // Add indicators to the return array. This makes it possible to
+                    // display the different meanings the publication details could
+                    // have to the user.
+                    'ind1' => $f264['ind1'],
+                    'ind2' => $f264['ind2'],
+                    // Join the processed data from the subfields of one single field
+                    // 264 to a comma separated string.
+                    'data' => $finalData
+                ];
+            }
+        }
+
+        return $result;
+    }
+    
+    /**
+     * ACDH-CH
+     * https://redmine.acdh.oeaw.ac.at/issues/19490#264
+     * 
+     * fetch the 264-6 and 880-6 and if their last two numbers are the same, then 
+     * we have to fetch the 880-6 values and display them
+     * 
+     * @param string $st
+     * @return string
+     */
+    private function fetchOrtVerlagAdditionalData(string $st): string {
+        $st = str_replace('880-', '', $st);
+        $fs880_6 = $this->getFieldsByKeysAndField($this->getMarcRecord(), ['6', 'a', 'b', 'c'], '880');
+        $fetch=[];
+        $str = "";
+        if(isset($fs880_6['6'])) {
+            foreach($fs880_6['6'] as $fk => $fv) {
+                $nv = str_replace('264-', '', substr($fv, 0, strpos($fv, "/")));
+                if($nv == $st) {
+                    $fetch[] = $fk;
+                }
+            }
+        }
+        
+        foreach($fetch as $k) {
+            if(isset($fs880_6['a'][$k])) {
+                $str = $fs880_6['a'][$k];
+            }
+            if(isset($fs880_6['b'][$k])) {
+                if(!empty($str)) {
+                    $str .= " : ";
+                }
+                $str .= $fs880_6['b'][$k];
+            }
+            if(isset($fs880_6['c'][$k])) {
+                if(!empty($str)){
+                    $str .= ", ";
+                }
+                $str .= $fs880_6['c'][$k];
+            }
+        }
+        return strip_tags($str);
     }
 
 }
