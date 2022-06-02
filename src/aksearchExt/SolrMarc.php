@@ -58,7 +58,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      */
     public function getClassification() {
         $values = $this->fields['basiskl_str_mv'] ?? false;
-        return $values ? implode("<br/>", $values) : null;
+        //return $values ? implode("<br/>", $values) : null;
+        return $values ? $values : null;
     }
 
     /**
