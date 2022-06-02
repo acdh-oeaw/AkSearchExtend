@@ -274,7 +274,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         foreach ($this->getMarcFieldsAsObject($marc, $field, null, null) as $field) {
             foreach ($keys as $k) {
                 if (!empty($field->$k)) {
-                    $values[$k][] = $field->$k . '<br/>';
+                    $values[$k][] = $field->$k;
                 }else {
                     //we have to add an empty result because we need the same amount of values for each field
                     $values[$k][] = '';
@@ -828,6 +828,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * https://redmine.acdh.oeaw.ac.at/issues/19490#264
      * @return array
      */
+    
     public function getPublicationDetailsAut() {
         // Create result array as return value
         $result = [];
@@ -848,7 +849,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             $subfsC = array_column($subfs, 'c');
             $subfs6 = array_column($subfs, '6');
 
-            $field880_6 = $this->fetchOrtVerlagAdditionalData($subfs6[0]);
+            //$field880_6 = $this->fetchOrtVerlagAdditionalData($subfs6[0]);
             
             // Join subfields c (= dates) to a string
             $dates = (!empty($subfsC)) ? join(', ', $subfsC) : null;
@@ -931,6 +932,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                     $fetch[] = $fk;
                 }
             }
+        }else {
+            return "";
         }
         
         foreach($fetch as $k) {
@@ -952,5 +955,41 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         }
         return strip_tags($str);
     }
+    
+    public function getPublishers(): array
+    {
+        
+        return $this->getPublicationInfo('b');
+        //return $this->getPublishersAdditional();
+    }
+    
+    private function getPublishersAdditional()
+    {
+        $fs880b = $this->getFieldsByKeysAndField($this->getMarcRecord(), ['b', '6'], '880');
+        $fs264b = $this->getFieldsByKeysAndField($this->getMarcRecord(), ['b', '6'], '264');
+        $fetch = [];
+     
+        if(isset($fs880b['6'])) {
+            foreach($fs880b['6'] as $fk => $fv) {
+                if (strpos($fv, '264-') !== false) {
+                    $nv = str_replace('264-', '', substr($fv, 0, strpos($fv, "/")));
+                    
+                    if(array_keys($fs264b['6'], '880-'.$nv)) {
+                        
+                        $key2646_arr = array_keys($fs264b['6'], '880-'.$nv);
+                        $key2646 = "";
+                        if(count((array)$key2646_arr) > 0) {
+                            $key2646 = $key2646_arr[0];
+                            $fetch[] = $fs264b['b'][$key2646].' / '.$fs880b['b'][$fk];
+                        } elseif(isset($fs880b['b'][$fk])) {
+                            $fetch[] = $fs880b['b'][$fk];
+                        }
+                    }
+                }
+            }
+        }
+      return $fetch;
+    }
+
 
 }
