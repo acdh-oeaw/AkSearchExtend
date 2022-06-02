@@ -155,7 +155,7 @@ class RecordDataFormatterFactory extends \AkSearch\View\Helper\Root\RecordDataFo
 
         // ACHD: Get Basisklassifikation (marc 084)
         // https://redmine.acdh.oeaw.ac.at/issues/19501
-        $spec->setLine('Classification', 'getClassification');
+        $spec->setTemplateLine('Classification', 'getClassification', 'data-classification.phtml');
 
         // AK: Sowidok - get geographical note
         $spec->setTemplateLine('Region', 'getSowidokGeographical', 'data-sowidokGeographical.phtml');
