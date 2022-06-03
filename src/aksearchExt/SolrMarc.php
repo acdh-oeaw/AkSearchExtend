@@ -686,7 +686,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/19917
-     * 
+     * https://redmine.acdh.oeaw.ac.at/issues/20336
      * Get the record view subtitle
      * @return string
      */
@@ -697,18 +697,18 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         foreach ($st as $k => $v) {
             if (isset($v->a) && isset($v->v)) {
-
+                
                 array_map(function ($a, $b) use (&$str) {
                     if (!empty($a) && !empty($b)) {
-                        $str .= $a . ' (' . $b . ')<br/>';
+                        $str .= $this->removeBracketsFromText($a) . ' (' . $this->removeBracketsFromText($b) . ')<br/>';
                     } else if (!empty($a)) {
-                        $str .= $a . '<br/>';
+                        $str .= $this->removeBracketsFromText($a) . '<br/>';
                     }
                 }, $v->a, $v->v);
             } else if (isset($v->a)) {
                 array_map(function ($a) use (&$str) {
                     if (!empty($a)) {
-                        $str .= $a . '<br/>';
+                        $str .= $this->removeBracketsFromText($a) . '<br/>';
                     }
                 }, $v->a);
             }
@@ -716,6 +716,16 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
 
         return $str;
+    }
+    
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/20336
+     * @param string $text
+     * @return string
+     */
+    public function removeBracketsFromText(string $text): string
+    {
+        return str_replace(">>", '', str_replace("<<", '', $text));
     }
 
     /**
@@ -737,7 +747,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         return implode(
                 ' / ',
                 array_filter(
-                        [trim($this->getTitle()), trim($this->getTitleSection()), $field245C],
+                        [trim($this->removeBracketsFromText($this->getTitle())), trim($this->getTitleSection()), $field245C],
                         array($this, 'filterCallback')
                 )
         );
@@ -757,14 +767,14 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $str = "";
         //if we have 880 title then we fetch that first
         if (!empty($title880)) {
-            $str .= $title880;
+            $str .= $this->removeBracketsFromText($title880);
         }
 
         if (is_array($matches) && count($matches) > 0) {
             if (!empty($str)) {
                 $str .= '<br/>';
             }
-            $str .= $this->stripNonSortingChars($matches[0]);
+            $str .= $this->removeBracketsFromText($this->stripNonSortingChars($matches[0]));
         }
         return $str;
     }
