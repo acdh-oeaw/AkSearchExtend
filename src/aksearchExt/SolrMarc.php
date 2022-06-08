@@ -844,6 +844,30 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         }
         return $str;
     }
+    
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/19487
+     * fetch 773 subfield order: $i : $t; $d; $g; $w;
+     * @return string
+     */
+    public function getSuperiorDocument(): string {
+        $str = "";
+        $field = $this->getFieldsByKeysAndField($this->getMarcRecord(), ['i', 't', 'd', 'g', 'w'], '773');
+        $i = isset($field['i'][0]) ? $field['i'][0] : ''; 
+        $t = isset($field['t'][0]) ? $field['t'][0] : ''; 
+        $d = isset($field['d'][0]) ? $field['d'][0] : ''; 
+        $g = isset($field['g'][0]) ? $field['g'][0] : ''; 
+        $w = isset($field['w'][0]) ? $field['w'][0] : ''; 
+        
+        if(!empty($i)) {
+            $str = $i.': ';
+        }
+        
+        $str .= implode('; ', array_filter([$t, $d, $g, $w]));        
+        
+        return $str;
+    }
+    
 
     /**
      * Get publication details from 264 fields. This function take several variants
