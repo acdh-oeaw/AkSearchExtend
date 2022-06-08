@@ -43,6 +43,10 @@ class RecordDataFormatterFactory extends \AkSearch\View\Helper\Root\RecordDataFo
         $spec = new \VuFind\View\Helper\Root\RecordDataFormatter\SpecBuilder();
 
         $spec->setTemplateLine(
+            'Superior document', 'getSuperiorDocument', 'data-superiorDocument.phtml'
+        );
+        
+        $spec->setTemplateLine(
             'Title supplement to the whole collection', 'getTitleAddition', 'data-titleAddition.phtml'
         );
         
