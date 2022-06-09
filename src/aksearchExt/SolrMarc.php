@@ -883,7 +883,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     public function getPublicationDetailsAut() {
         // Create result array as return value
         $result = [];
-
+        
         // Get all fields 264 and add their data to an easy-to-process array
         $fs264 = $this->getFieldsAsArray('264');
 
@@ -900,7 +900,10 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             $subfsC = array_column($subfs, 'c');
             $subfs6 = array_column($subfs, '6');
 
-            //$field880_6 = $this->fetchOrtVerlagAdditionalData($subfs6[0]);
+            //if we dont have the subf 6 then we will not fetch the additional infos
+            if(isset($subfs6[0])) {
+                $field880_6 = $this->fetchOrtVerlagAdditionalData($subfs6[0]);
+            }
             // Join subfields c (= dates) to a string
             $dates = (!empty($subfsC)) ? join(', ', $subfsC) : null;
 
@@ -970,8 +973,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @param string $st
      * @return string
      */
-    private function fetchOrtVerlagAdditionalData(string $st): string {
-        $st = str_replace('880-', '', $st);
+    private function fetchOrtVerlagAdditionalData(string $st): string {        
+        $st = str_replace('880-', '', $st);        
         $fs880_6 = $this->getFieldsByKeysAndField($this->getMarcRecord(), ['6', 'a', 'b', 'c'], '880');
         $fetch = [];
         $str = "";
@@ -1006,13 +1009,14 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         return strip_tags($str);
     }
 
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/19490#264 Search result
+     * @return array
+     */
     public function getPublishers(): array {
-
-        return $this->getPublicationInfo('b');
-        //return $this->getPublishersAdditional();
-    }
-
-    private function getPublishersAdditional() {
+        //old basic solution
+        //return $this->getPublicationInfo('b');
+        
         $fs880b = $this->getFieldsByKeysAndField($this->getMarcRecord(), ['b', '6'], '880');
         $fs264b = $this->getFieldsByKeysAndField($this->getMarcRecord(), ['b', '6'], '264');
         $fetch = [];
@@ -1023,12 +1027,11 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                     $nv = str_replace('264-', '', substr($fv, 0, strpos($fv, "/")));
 
                     if (array_keys($fs264b['6'], '880-' . $nv)) {
-
                         $key2646_arr = array_keys($fs264b['6'], '880-' . $nv);
                         $key2646 = "";
                         if (count((array) $key2646_arr) > 0) {
                             $key2646 = $key2646_arr[0];
-                            $fetch[] = $fs264b['b'][$key2646] . ' / ' . $fs880b['b'][$fk];
+                            $fetch[] =  $fs880b['b'][$fk]. ' / ' . $fs264b['b'][$key2646];
                         } elseif (isset($fs880b['b'][$fk])) {
                             $fetch[] = $fs880b['b'][$fk];
                         }
