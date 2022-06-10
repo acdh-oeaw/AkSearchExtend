@@ -848,23 +848,23 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/19487
-     * fetch 773 subfield order: $i : $t; $d; $g; $w;
+     * fetch solr container_reference and container_title
      * @return string
      */
     public function getSuperiorDocument(): string {
+        //
+        return "";
         $str = "";
-        $field = $this->getFieldsByKeysAndField($this->getMarcRecord(), ['i', 't', 'd', 'g', 'w'], '773');
-        $i = isset($field['i'][0]) ? $field['i'][0] : ''; 
-        $t = isset($field['t'][0]) ? $field['t'][0] : ''; 
-        $d = isset($field['d'][0]) ? $field['d'][0] : ''; 
-        $g = isset($field['g'][0]) ? $field['g'][0] : ''; 
-        $w = isset($field['w'][0]) ? $field['w'][0] : ''; 
-        
-        if(!empty($i)) {
-            $str = $i.': ';
+        if(isset($this->fields['container_title'])) {
+            $str = $this->fields['container_title'];
         }
         
-        $str .= implode('; ', array_filter([$t, $d, $g, $w]));        
+        if(isset($this->fields['container_reference'])) {
+            if(!empty($str)) {
+                $str .= "; ";
+            }
+            $str .= "<a href='".$this->fields['container_reference']."'>".$this->fields['container_reference']."</a>";
+        }
         
         return $str;
     }
