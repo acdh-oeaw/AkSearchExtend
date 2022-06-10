@@ -47,9 +47,23 @@ class ItemData {
         $data = new ItemData();
         $data->availability = true;
         $data->url = $ave->x ?? '';
-        $data->mmsId = $ave->{0};
+        $data->mmsId = $ave->Z;
         $data->description = $ave->P ?? 'missing title';
         $data->status = $ave->b ?? '';
+        $data->avek = $ave->k ?? '';
+        $data->aveA = $ave->A ?? '';
+        $data->aveB = $ave->B ?? '';
+        $data->aveC = $ave->C ?? '';
+        $data->aveD = $ave->D ?? '';
+        $data->aveE = $ave->E ?? '';
+        $data->aveF = $ave->F ?? '';
+        $data->aveG = $ave->G ?? '';
+        $data->aveH = $ave->H ?? '';
+        $data->aveI = $ave->I ?? '';
+        $data->aveJ = $ave->J ?? '';
+        $data->aveK = $ave->K ?? '';
+        $data->aveL = $ave->L ?? '';
+               
         return $data;
     }
     
