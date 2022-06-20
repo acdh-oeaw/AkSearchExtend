@@ -480,10 +480,10 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                     if (in_array($ov['name'], $names)) {
                         unset($contributors[$k][$ok]);
                     } else {
-                        $names[] = $ov['name'];
+                        $names[] = $this->removeBracketsFromText($ov['name']);
                     }
                 } else {
-                    $names[] = $ov['name'];
+                    $names[] = $this->removeBracketsFromText($ov['name']);
                 }
             }
         }
@@ -531,12 +531,6 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $authors = $this->mergeAuthorsAndRoles($primPers, $primRole);
         $authors2 = $this->mergeAuthorsAndRoles($secPers, $secRole);
         // Merge array
-        /*
-          echo '<pre>';
-          var_dump($authors);
-          var_dump($authors2);
-          echo '</pre>';
-         */
         $merged = array_merge($authors, $authorsCorp, $primMeet, $authors2, $secCorp, $secMeet);
         $mergedWithOutRole = array_merge($primPers, $primCorp, $primMeet, $secPers, $secCorp, $secMeet);
 
@@ -764,7 +758,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     public function getTitle() {
 
         $matches = $this->getFieldArray('245', ['a', 'b'], true, ' : ');
-        $title880 = $this->getTitle880();
+        $title880 = $this->getTitle880();        
         $str = "";
         //if we have 880 title then we fetch that first
         if (!empty($title880)) {
@@ -776,7 +770,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 $str .= '<br/>';
             }
             $str .= $this->removeBracketsFromText($this->stripNonSortingChars($matches[0]));
-        }
+        }       
         return $str;
     }
 
@@ -789,27 +783,29 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         //first check if the actual 245 has a field 6, if yes then we fetch the 880
         $field880 = $this->getMarcFieldsAsObject($this->getMarcRecord(), 880, null, null, null);
         $str = "";
-        $fchk = ['a', 'b', 'c'];
+        $fchk = ['a', 'b', 'c', 'n', 'p'];
         $fields = [];
+        
         foreach ($field880 as $k => $val) {
-            $f = 6;
-            if (isset($val->$f)) {
-                foreach ($val->$f as $v) {
-                    if (strpos($v, '245-') !== false) {
+            if (isset($val->{6})) {
+                foreach ($val->{6} as $v) {
+                    if (strpos($v, '245-') !== false) {                        
                         $fields[] = $k;
                     }
                 }
             }
         }
-
+       
         foreach ($fields as $f) {
             foreach ($fchk as $fc) {
                 if (isset($field880[$f]->$fc)) {
-                    $str .= implode(' / ', $field880[$f]->$fc);
+                    $text = implode(' / ', $field880[$f]->$fc);
+                    //add the slash
+                    $str .= $text.' / ';
                 }
             }
         }
-        return $str;
+        return rtrim($str, '/ ');
     }
 
     /**
@@ -974,11 +970,16 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @param string $st
      * @return string
      */
-    private function fetchOrtVerlagAdditionalData(string $st): string {        
-        $st = str_replace('880-', '', $st);        
-        $fs880_6 = $this->getFieldsByKeysAndField($this->getMarcRecord(), ['6', 'a', 'b', 'c'], '880');
+    private function fetchOrtVerlagAdditionalData(string $st): string {      
+        
+        $st = str_replace('880-', '', $st);
+        if (strpos($st, "/") !== false) {
+           $st = strstr($st, '/', true);
+        }
+          
+     
+        $fs880_6 = $this->getFieldsByKeysAndField($this->getMarcRecord(), ['6', 'a', 'b', 'c', 'n', 'p'], '880');
         $fetch = [];
-        $str = "";
         if (isset($fs880_6['6'])) {
             foreach ($fs880_6['6'] as $fk => $fv) {
                 $nv = str_replace('264-', '', substr($fv, 0, strpos($fv, "/")));
@@ -989,25 +990,57 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         } else {
             return "";
         }
-
-        foreach ($fetch as $k) {
-            if (isset($fs880_6['a'][$k])) {
-                $str = $fs880_6['a'][$k];
-            }
-            if (isset($fs880_6['b'][$k])) {
-                if (!empty($str)) {
-                    $str .= " : ";
-                }
-                $str .= $fs880_6['b'][$k];
-            }
-            if (isset($fs880_6['c'][$k])) {
-                if (!empty($str)) {
-                    $str .= ", ";
-                }
-                $str .= $fs880_6['c'][$k];
-            }
-        }
+        $str = $this->fetchOrtVerlagFields($fs880_6, $fetch);        
         return strip_tags($str);
+    }
+    
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/19490#Separators-between-subfields
+     * 
+     * @param array $fs880_6
+     * @param array $fetch
+     * @return string
+     */
+    private function fetchOrtVerlagFields(array $f, array $fetch): string {
+        $str = "";
+        foreach ($fetch as $k) {
+            if ($this->checkVariable($f['a'][$k]) && $this->checkVariable($f['b'][$k]) && $this->checkVariable($f['c'][$k])) {
+                $b = (is_array($f['b'][$k])) ? implode(',', $f['b'][$k]) : $f['b'][$k];
+                $c = (is_array($f['c'][$k])) ? implode(',', $f['c'][$k]) : $f['c'][$k];
+                $str = $f['a'][$k]. ' : '. $b.','.$c;
+            } 
+            else if ($this->checkVariable($f['a'][$k]) && $this->checkVariable($f['b'][$k])) {
+                $b = (is_array($f['b'][$k])) ? implode(',', $f['b'][$k]) : $f['b'][$k];
+                $str = $f['a'][$k]. ' : '. $b;
+            }
+            else if ($this->checkVariable($f['a'][$k]) && $this->checkVariable($f['c'][$k])) {
+                $c = (is_array($f['c'][$k])) ? implode(',', $f['c'][$k]) : $f['c'][$k];
+                $str = $f['a'][$k]. ', '. $c;
+            }
+            else if ($this->checkVariable($f['b'][$k]) && $this->checkVariable($f['c'][$k])) {
+                $b = (is_array($f['b'][$k])) ? implode(',', $f['b'][$k]) : $f['b'][$k];
+                $c = (is_array($f['c'][$k])) ? implode(',', $f['c'][$k]) : $f['c'][$k];
+                $str = $b. ', '. $c;
+            }
+            else if ($this->checkVariable($f['a'][$k])) {
+                $str = $f['a'][$k];
+            }
+            else if ($this->checkVariable($f['b'][$k])) {
+                $str = (is_array($f['b'][$k])) ? implode(',', $f['b'][$k]) : $f['b'][$k];
+            }
+            else if ($this->checkVariable($f['c'][$k])) {
+                $str = (is_array($f['c'][$k])) ? implode(',', $f['c'][$k]) : $f['c'][$k];
+            }
+           
+        }
+        return $str;
+    }
+    
+    private function checkVariable($var): bool {
+        if(isset($var) && !empty($var)) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -1032,7 +1065,18 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                         $key2646 = "";
                         if (count((array) $key2646_arr) > 0) {
                             $key2646 = $key2646_arr[0];
-                            $fetch[] =  $fs880b['b'][$fk]. ' / ' . $fs264b['b'][$key2646];
+                        
+                            if($this->checkVariable($fs880b['b'][$fk]) && $this->checkVariable($fs264b['b'][$key2646])) {
+                                $str = "";
+                                $str = (is_array($fs880b['b'][$fk])) ? implode('/', $fs880b['b'][$fk]) : $fs880b['b'][$fk];
+                                (!empty($str)) ? $str .= " / " : "" ;
+                                $str .= (is_array($fs264b['b'][$key2646])) ? implode('/', $fs264b['b'][$key2646]) : $fs264b['b'][$key2646];
+                                $fetch[] =  $str;
+                            } else if ($this->checkVariable($fs880b['b'][$fk])) {
+                                $fetch[] =  (is_array($fs880b['b'][$fk])) ? implode('/', $fs880b['b'][$fk]) : $fs880b['b'][$fk];
+                            } else if ($this->checkVariable($fs264b['b'][$key2646])) {
+                                $fetch[] =  (is_array($fs264b['b'][$key2646])) ? implode('/', $fs264b['b'][$key2646]) : $fs264b['b'][$key2646];
+                            }                            
                         } elseif (isset($fs880b['b'][$fk])) {
                             $fetch[] = $fs880b['b'][$fk];
                         }
