@@ -847,21 +847,19 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * fetch solr container_reference and container_title
      * @return string
      */
-    public function getSuperiorDocument(): string {
-        //
-        return "";
+    public function getSuperiorDocument(): string {        
         $str = "";
-        if(isset($this->fields['container_title'])) {
-            $str = $this->fields['container_title'];
-        }
-        
-        if(isset($this->fields['container_reference'])) {
+        if(isset($this->fields['container_reference']) && isset($this->fields['container_title'])) {
             if(!empty($str)) {
                 $str .= "; ";
             }
-            $str .= "<a href='".$this->fields['container_reference']."'>".$this->fields['container_reference']."</a>";
-        }
-        
+            $str .= "<a href='".$this->fields['container_reference']."'>".$this->fields['container_title']."</a>";
+        } else if (isset($this->fields['container_title'])) {
+            if(!empty($str)) {
+                $str .= "; ";
+            }
+            $str .= $this->fields['container_title'];
+        }        
         return $str;
     }
     
