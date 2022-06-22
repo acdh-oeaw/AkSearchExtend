@@ -105,6 +105,11 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         if (count($parents) === 0) {
             return null;
         }
+        
+        if(!empty($this->getSuperiorDocument())) {
+            return null;
+        }
+        
         return [[
         'id' => $parents[0],
         'title' => $this->getContainerTitle(),
