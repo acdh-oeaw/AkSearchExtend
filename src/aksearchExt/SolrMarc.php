@@ -204,21 +204,55 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         //    https://redmine.acdh.oeaw.ac.at/issues/19474
         $marc = $this->getMarcRecord();
         $ave = $this->getMarcFieldsAsObject($marc, 'AVE');
-
+     
         if (count($ave) > 0) {
             foreach ($this->getMarcFieldsAsObject($marc, 'AVE') as $ave) {
                 if (!empty($ave->x) && !empty($ave->Z)) {
                     $holding = new HoldingData(new IlsHoldingId($ave->Z));
-                    $holding->items[] = ItemData::fromAve($ave);
-                    $results['electronic_holdings'][] = $holding;
+                    $holding->items[] = ItemData::fromAve($ave);                    
+                    $results['electronic_holdings'][$ave->Z] = $holding;
+                } else if (!empty($ave->Z)) {
+                    $holding = new HoldingData(new IlsHoldingId($ave->Z));
+                    $holding->items[] = ItemData::fromAve($ave);     
+                    $results['electronic_holdings_extra'][$ave->Z] = $holding;
                 }
             }
-        }
+        } 
+        $this->mergeElectronicHoldingsExtraData($results);      
         //-->
-
         return $results;
     }
+    
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/20327
+     * @param array $results
+     */
+    private function mergeElectronicHoldingsExtraData(array &$results) {        
+        foreach($results['electronic_holdings'] as $k => $v) {            
+            foreach($results['electronic_holdings'][$k]->items as $ik => $iv ) {
+                if(isset($results['electronic_holdings_extra'][$k]->items[$ik]) && $results['electronic_holdings_extra'][$k]->items[$ik]->mmsId === $k) {
+                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->avek)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->avek = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->avek :  "";
+                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveA)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveA = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveA :  "";
+                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveB)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveB = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveB :  "";
+                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveC)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveC = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveC :  "";
+                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveD)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveD = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveD :  "";
+                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveE)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveE = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveE :  "";
+                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveF)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveF = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveF :  "";
+                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveG)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveG = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveG :  "";
+                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveH)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveH = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveH :  "";
+                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveI)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveI = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveI :  "";
+                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveJ)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveJ = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveJ :  "";
+                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveK)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveK = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveK :  "";
+                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveL)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveL = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveL :  "";                 
+                }
+            }           
+        }
+    }
 
+    /**
+     * Check if we have electronic data, if yes then fetch the values
+     * @return bool
+     */
     public function hasElectronicHoldings(): bool {
         $marc = $this->getMarcRecord();
         $ave = $this->getMarcFieldsAsObject($marc, 'AVE');
@@ -717,10 +751,23 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * https://redmine.acdh.oeaw.ac.at/issues/20336
      * @param string $text
      * @return string
-     */
+    */
     public function removeBracketsFromText(string $text): string
     {
         return str_replace(">>", '', str_replace("<<", '', $text));
+    }
+    
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/20336
+     * @param array $data
+     * @return array
+    */
+    public function removeBracketsFromArray(array $data): array
+    {
+        foreach($data as $k => $v) {
+            $data[$k] = str_replace(">>", '', str_replace("<<", '', $v));
+        }
+        return $data;
     }
 
     /**
@@ -890,9 +937,9 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             $subfs = $f264['subfs'];
 
             // Array columns of subfields a, b and c            
-            $subfsA = array_column($subfs, 'a');
-            $subfsB = array_column($subfs, 'b');
-            $subfsC = array_column($subfs, 'c');
+            $subfsA = $this->removeBracketsFromArray(array_column($subfs, 'a'));
+            $subfsB = $this->removeBracketsFromArray(array_column($subfs, 'b'));
+            $subfsC = $this->removeBracketsFromArray(array_column($subfs, 'c'));
             $subfs6 = array_column($subfs, '6');
 
             //if we dont have the subf 6 then we will not fetch the additional infos
@@ -973,8 +1020,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $st = str_replace('880-', '', $st);
         if (strpos($st, "/") !== false) {
            $st = strstr($st, '/', true);
-        }
-          
+        }         
      
         $fs880_6 = $this->getFieldsByKeysAndField($this->getMarcRecord(), ['6', 'a', 'b', 'c', 'n', 'p'], '880');
         $fetch = [];

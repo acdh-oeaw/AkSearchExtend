@@ -50,19 +50,20 @@ class ItemData {
         $data->mmsId = $ave->Z;
         $data->description = $ave->P ?? 'missing title';
         $data->status = $ave->b ?? '';
-        $data->avek = $ave->k ?? '';
-        $data->aveA = $ave->A ?? '';
-        $data->aveB = $ave->B ?? '';
-        $data->aveC = $ave->C ?? '';
-        $data->aveD = $ave->D ?? '';
-        $data->aveE = $ave->E ?? '';
-        $data->aveF = $ave->F ?? '';
-        $data->aveG = $ave->G ?? '';
-        $data->aveH = $ave->H ?? '';
-        $data->aveI = $ave->I ?? '';
-        $data->aveJ = $ave->J ?? '';
-        $data->aveK = $ave->K ?? '';
-        $data->aveL = $ave->L ?? '';
+        $data->portfolio = new \stdClass();
+        $data->portfolio->avek = $ave->k ?? '';
+        $data->portfolio->aveA = $ave->A ?? '';
+        $data->portfolio->aveB = $ave->B ?? '';
+        $data->portfolio->aveC = $ave->C ?? '';
+        $data->portfolio->aveD = $ave->D ?? '';
+        $data->portfolio->aveE = $ave->E ?? '';
+        $data->portfolio->aveF = $ave->F ?? '';
+        $data->portfolio->aveG = $ave->G ?? '';
+        $data->portfolio->aveH = $ave->H ?? '';
+        $data->portfolio->aveI = $ave->I ?? '';
+        $data->portfolio->aveJ = $ave->J ?? '';
+        $data->portfolio->aveK = $ave->K ?? '';
+        $data->portfolio->aveL = $ave->L ?? '';
                
         return $data;
     }
