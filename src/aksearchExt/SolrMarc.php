@@ -897,22 +897,19 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/19487
      * fetch solr container_reference and container_title
-     * @return string
+     * we need the baseurl also, but thats available only in the templates
+     * @return array
      */
-    public function getSuperiorDocument(): string {        
-        $str = "";
+    public function getSuperiorDocument($baseUrl = ""): array {
+        $arr = [];
         if(isset($this->fields['container_reference']) && isset($this->fields['container_title'])) {
-            if(!empty($str)) {
-                $str .= "; ";
-            }
-            $str .= "<a href='".$this->fields['container_reference']."'>".$this->fields['container_title']."</a>";
+            $arr['container_reference'] = $this->fields['container_reference'];
+            $arr['container_title'] = $this->fields['container_title'];
+           
         } else if (isset($this->fields['container_title'])) {
-            if(!empty($str)) {
-                $str .= "; ";
-            }
-            $str .= $this->fields['container_title'];
+            $arr['container_title'] = $this->fields['container_title'];
         }        
-        return $str;
+        return $arr;
     }
     
 
