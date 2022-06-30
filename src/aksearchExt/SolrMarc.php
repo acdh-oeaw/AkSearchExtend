@@ -424,9 +424,11 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         // Get secondary authors
         $secNames = $this->fields['author2'] ?? null;
         $secRole = $this->fields['author2_role'] ?? null;
+        $secOriginalWriting = $this->fields['author2_original_writing_str_mv'] ?? null;
+        
         $authors2 = array();
         if ($secNames !== null) {
-            $authors2 = $this->createSecondaryAuthors($secNames, $secRole);
+            $authors2 = $this->createSecondaryAuthors($secNames, $secRole, $secOriginalWriting);
         }
 
         // Get secondary corporate authors
@@ -535,11 +537,15 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @param type $roles
      * @return array
      */
-    private function createSecondaryAuthors($names, $roles): array {
+    private function createSecondaryAuthors($names, $roles, $ow): array {
         $authors2 = array();
         foreach ($names as $key1 => $value1) {
             // store IP
             $authors2[$key1]['name'] = $value1;
+            if(isset($ow[$key1]) && !empty($ow[$key1])) {
+                $authors2[$key1]['name'] = $ow[$key1]. ' / '.$value1;
+            }
+            
             // store type of cam
             $authors2[$key1]['role'] = $roles[$key1] ?? '';
         }
