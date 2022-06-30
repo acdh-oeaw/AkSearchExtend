@@ -424,11 +424,11 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         // Get secondary authors
         $secNames = $this->fields['author2'] ?? null;
         $secRole = $this->fields['author2_role'] ?? null;
-        $secOriginalWriting = $this->fields['author2_original_writing_str_mv'] ?? null;
+        $secOW = $this->fields['author2_original_writing_str_mv'] ?? null;
         
         $authors2 = array();
         if ($secNames !== null) {
-            $authors2 = $this->createSecondaryAuthors($secNames, $secRole, $secOriginalWriting);
+            $authors2 = $this->createSecondaryAuthors($secNames, $secRole, $secOW);
         }
 
         // Get secondary corporate authors
@@ -568,13 +568,14 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $primMeet = (array) ($this->fields['author_meeting_txt'] ?? []);
         // Secondary authors
         $secPers = (array) ($this->fields['author2'] ?? []);
+        $secOW = (array) ($this->fields['author2_original_writing_str_mv'] ??  []);
         $secRole = (array) ($this->fields['author2_role'] ?? []);
         $secCorp = (array) ($this->fields['author2_corporate_txt_mv'] ?? []);
         $secMeet = (array) ($this->fields['author2_meeting_txt_mv'] ?? []);
 
         $authorsCorp = $this->mergeAuthorsAndRoles($primCorp, $primCorpRole);
         $authors = $this->mergeAuthorsAndRoles($primPers, $primRole);
-        $authors2 = $this->mergeAuthorsAndRoles($secPers, $secRole);
+        $authors2 = $this->mergeAuthorsAndRoles($secPers, $secRole, $secOW);
         // Merge array
         $merged = array_merge($authors, $authorsCorp, $primMeet, $authors2, $secCorp, $secMeet);
         $mergedWithOutRole = array_merge($primPers, $primCorp, $primMeet, $secPers, $secCorp, $secMeet);
@@ -591,20 +592,24 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @param type $roles
      * @return array
      */
-    private function mergeAuthorsAndRoles($names, $roles): array {
+    private function mergeAuthorsAndRoles($names, $roles, $ow = array()): array {
         $authors = array();
         foreach ($names as $key1 => $value1) {
+            $owStr = "";
+            if(isset($ow[$key1]) && !empty($ow[$key1])) {
+                $owStr = $ow[$key1]. ' / ';
+            }
             if (count($authors) > 0) {
                 foreach ($authors as $ak => $av) {
                     if ($av['name'] == $value1) {
                         $authors[$ak]['role'][] = $roles[$key1];
                     } else {
-                        $authors[$key1] = array("name" => $value1, "role" => array(
+                        $authors[$key1] = array("name" => $owStr.$value1, "role" => array(
                                 $roles[$key1]));
                     }
                 }
             } else {
-                $authors[$key1] = array("name" => $value1, "role" => array($roles[$key1]));
+                $authors[$key1] = array("name" => $owStr.$value1, "role" => array($roles[$key1]));
             }
         }
         return $this->mergeRolesForSearchView($authors);
