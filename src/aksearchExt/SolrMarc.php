@@ -537,7 +537,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @param type $roles
      * @return array
      */
-    private function createSecondaryAuthors($names, $roles, $ow): array {
+    private function createSecondaryAuthors($names, $roles, $ow = []): array {
         $authors2 = array();
         foreach ($names as $key1 => $value1) {
             // store IP
