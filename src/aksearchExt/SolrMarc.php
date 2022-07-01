@@ -424,8 +424,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         // Get secondary authors
         $secNames = $this->fields['author2'] ?? null;
         $secRole = $this->fields['author2_role'] ?? null;
-        $secOW = $this->fields['author2_original_writing_str_mv'] ?? null;
-        
+        $secOW = $this->fields['author2_original-writing_str_mv'] ?? null;
+       
         $authors2 = array();
         if ($secNames !== null) {
             $authors2 = $this->createSecondaryAuthors($secNames, $secRole, $secOW);
@@ -460,9 +460,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         }
 
         // Add primary person authors to array (values from Marc21 field 700)
-        $authorsArray = array_merge_recursive($this->addAuthorsToContributorsArray($authors), $this->addAuthorsToContributorsArray($authors2));
+        $authorsArray = array_merge_recursive($this->addAuthorsToContributorsArray($authors), $this->addAuthorsToContributorsArray($authors2));        
         $contributors = array_merge_recursive($contributors, $authorsArray);
-
         // Add secondary corporation authors to array (values from Marc21 field 710)
         if ($secCorps) {
             $this->getSecondaryAuthorData($contributors, $secCorps, 'corporation');
@@ -471,11 +470,31 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         if ($secMeetings) {
             $this->getSecondaryAuthorData($contributors, $secMeetings, 'meeting');
         }
-
+       
         $this->removeContributorDuplicates($contributors);
+        $this->changeExtNameToBasicName($contributors);
         return $contributors;
     }
 
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/19490#7xx-700-710-711
+     * We have to create the name_extemd key because first we need to filter out
+     * the duplications. and if it is filtered then we simply copy the extended value
+     * into the name, and then we dont have to extend the gui in all templates to apply
+     * the 700 rules for the name display.
+     * @param array $contributors
+     */
+    private function changeExtNameToBasicName(array &$contributors) {
+        foreach($contributors as $key => $val) {
+            foreach($val as $k => $v) {
+                if(isset($v['name_extended'])) {
+                    $contributors[$key][$k]['name'] = $v['name_extended'];
+                }    
+            }
+        }
+        
+    }
+    
     /**
      * Create the secondary author additional data (corporation, meeting, etc..)
      * @param array $contributors
@@ -543,7 +562,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             // store IP
             $authors2[$key1]['name'] = $value1;
             if(isset($ow[$key1]) && !empty($ow[$key1])) {
-                $authors2[$key1]['name'] = $ow[$key1]. ' / '.$value1;
+                $authors2[$key1]['name_extended'] = $ow[$key1]. ' / '.$value1;
             }
             
             // store type of cam
@@ -568,7 +587,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $primMeet = (array) ($this->fields['author_meeting_txt'] ?? []);
         // Secondary authors
         $secPers = (array) ($this->fields['author2'] ?? []);
-        $secOW = (array) ($this->fields['author2_original_writing_str_mv'] ??  []);
+        $secOW = (array) ($this->fields['author2_original-writing_str_mv'] ??  []);
         $secRole = (array) ($this->fields['author2_role'] ?? []);
         $secCorp = (array) ($this->fields['author2_corporate_txt_mv'] ?? []);
         $secMeet = (array) ($this->fields['author2_meeting_txt_mv'] ?? []);
@@ -663,6 +682,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 $contributors[$value['role']][] = [
                     'entity' => 'person',
                     'name' => $value['name'],
+                    'name_extended' => (isset($value['name_extended']) ? $value['name_extended'] : null),
                     'role' => $value['role'],
                     'auth' => null,
                     'primary' => false
