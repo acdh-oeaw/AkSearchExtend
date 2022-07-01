@@ -424,7 +424,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         // Get secondary authors
         $secNames = $this->fields['author2'] ?? null;
         $secRole = $this->fields['author2_role'] ?? null;
-        $secOW = $this->fields['author2_original-writing_str_mv'] ?? null;
+        $secOW = $this->fields['author2_original_writing_str_mv'] ?? null;
        
         $authors2 = array();
         if ($secNames !== null) {
@@ -587,7 +587,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $primMeet = (array) ($this->fields['author_meeting_txt'] ?? []);
         // Secondary authors
         $secPers = (array) ($this->fields['author2'] ?? []);
-        $secOW = (array) ($this->fields['author2_original-writing_str_mv'] ??  []);
+        $secOW = (array) ($this->fields['author2_original_writing_str_mv'] ??  []);
         $secRole = (array) ($this->fields['author2_role'] ?? []);
         $secCorp = (array) ($this->fields['author2_corporate_txt_mv'] ?? []);
         $secMeet = (array) ($this->fields['author2_meeting_txt_mv'] ?? []);
