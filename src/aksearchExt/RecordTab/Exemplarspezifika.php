@@ -40,6 +40,12 @@ namespace aksearchExt\RecordTab;
  */
 class Exemplarspezifika extends \VuFind\RecordTab\HoldingsILS {
     
+    
+    public function isActive(): bool {
+        //if there us 991 or 992 then is should be true
+        return $this->getRecordDriver()->tryMethod('is911992');         
+     }
+     
     /**
      * AK: Check if this record has parent records
      *

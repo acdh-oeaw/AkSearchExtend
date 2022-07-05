@@ -271,6 +271,24 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         return false;
     }
 
+    
+    /**
+     * We have to check the 991 and 992 fields for the exemplarspezifika tab
+     * if there is no fields then we will not display the tab
+     * @return bool
+     */
+    public function is911992(): bool
+    {
+        $active = false;
+        if(count($this->getMarcFieldsAsObject( $this->getMarcRecord(), '991', null, null)) > 0) {
+            $active = true;
+        } else if (count($this->getMarcFieldsAsObject( $this->getMarcRecord(), '992', null, null)) > 0) {
+            $active = true;
+        }
+        
+      
+        return $active;
+    }
     /**
      * Display Exemplarbeschreibung and Ex Libris data on the holdings tab
      * https://redmine.acdh.oeaw.ac.at/issues/19506
@@ -278,9 +296,11 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     public function getHolding991992() {
         $id = $this->getUniqueID();
         $marc = $this->getMarcRecord();
-        // get holdings
-        $results = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
+        // get holdings because we have to use the holdings result array to display the data inside the tab
+        //$results = $this->holdLogic->getHoldings($id, $this->tryMethod('getConsortialIDs'));
+        $results = $this->getRealTimeHoldings();
         $this->getHolding991992Data($marc, $results['holdings']);
+        
         return $this->formatHolding991992Data($results['holdings']);
     }
 
@@ -288,15 +308,15 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         $exemplerdata = array();
         foreach ($data as $name => $holding) {
-            if (isset($holding['items'])) {
+            if (isset($holding->items)) {
                 //$exemplerdata[$name];
-                foreach ($holding['items'] as $item) {
-                    if ($item['exemplarbeschreibung']) {
-                        $exemplerdata[$name]['exemplarbeschreibung'] = $item['exemplarbeschreibung'];
+                foreach ($holding->items as $item) {
+                    if ($item->exemplarbeschreibung) {
+                        $exemplerdata[$name]['exemplarbeschreibung'] = $item->exemplarbeschreibung;
                     }
 
-                    if ($item['exLibris']) {
-                        $exemplerdata[$name]['exLibris'] = $item['exLibris'];
+                    if ($item->exLibris) {
+                        $exemplerdata[$name]['exLibris'] = $item->exLibris;
                     }
                 }
             }
@@ -318,10 +338,11 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $keys991 = array('8', 'a', 'b', 'c', 'd', 'f', 'i', 'j', 'k', 'l', 'm', 't');
 
         foreach ($data as &$v) {
-            if (isset($v['items'])) {
-                foreach ($v['items'] as &$iv) {
-                    $iv['exLibris'] = $this->getFieldsByKeysAndField($marc, $keys991, '991');
-                    $iv['exemplarbeschreibung'] = $this->getFieldsByKeysAndField($marc, $keys992, '992');
+          
+            if (isset($v->items)) {
+                foreach ($v->items as &$iv) {
+                    $iv->exLibris = $this->getFieldsByKeysAndField($marc, $keys991, '991');
+                    $iv->exemplarbeschreibung = $this->getFieldsByKeysAndField($marc, $keys992, '992');
                 }
             }
         }
