@@ -445,7 +445,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         // Get secondary authors
         $secNames = $this->fields['author2'] ?? null;
         $secRole = $this->fields['author2_role'] ?? null;
-        $secOW = $this->fields['author2_original_writing_str_mv'] ?? null;
+        $secOW = (isset($this->fields['author2_original_writing_str_mv']) && $this->fields['author2_original_writing_str_mv'] === "noLinkedField" ? $this->fields['author2_original_writing_str_mv'] : null );
        
         $authors2 = array();
         if ($secNames !== null) {
