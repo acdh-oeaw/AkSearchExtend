@@ -636,7 +636,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $authors = array();
         foreach ($names as $key1 => $value1) {
             $owStr = "";
-            if(isset($ow[$key1]) && !empty($ow[$key1])) {
+            if(isset($ow[$key1]) && !empty($ow[$key1]) && $ow[$key1] !== 'noLinkedField') {
                 $owStr = $ow[$key1]. ' / ';
             }
             if (count($authors) > 0) {
