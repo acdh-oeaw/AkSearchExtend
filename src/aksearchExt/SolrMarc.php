@@ -445,8 +445,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         // Get secondary authors
         $secNames = $this->fields['author2'] ?? null;
         $secRole = $this->fields['author2_role'] ?? null;
-        $secOW = (isset($this->fields['author2_original_writing_str_mv']) && $this->fields['author2_original_writing_str_mv'] === "noLinkedField" ? $this->fields['author2_original_writing_str_mv'] : null );
-       
+        $secOW = $this->fields['author2_original_writing_str_mv'] ?? null; 
+            
         $authors2 = array();
         if ($secNames !== null) {
             $authors2 = $this->createSecondaryAuthors($secNames, $secRole, $secOW);
@@ -582,7 +582,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         foreach ($names as $key1 => $value1) {
             // store IP
             $authors2[$key1]['name'] = $value1;
-            if(isset($ow[$key1]) && !empty($ow[$key1])) {
+            if(isset($ow[$key1]) && !empty($ow[$key1]) && $ow[$key1] !== 'noLinkedField' ) {              
                 $authors2[$key1]['name_extended'] = $ow[$key1]. ' / '.$value1;
             }
             
