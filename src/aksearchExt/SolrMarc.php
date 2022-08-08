@@ -1184,5 +1184,19 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         }
         return $fetch;
     }
+    
+    
+    /**
+     * https://redmine.acdh.oeaw.ac.at/issues/20567
+     * @return array
+     */
+    public function getContentsPiecesData(): array
+    {
+        $title = ($this->fields['title'] ??  null);
+        $publishDate = ($this->fields['publishDate'][0] ??  null);
+        $edition = ($this->fields['edition'][0] ??  null);
+        $band = ($this->fields['hierarchy_sequence'][0] ??  null);
+        return array('title' => $title, 'publishDate' => $publishDate, 'edition' => $edition, 'band' => $band );
+    }
 
 }
