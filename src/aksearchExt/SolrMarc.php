@@ -413,7 +413,6 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @return array    An array with all contributors grouped by role
      */
     public function getContributorsByRole() {
-
         // Initialize return variable
         $contributors = [];
 
@@ -956,10 +955,10 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $arr = [];
         if(isset($this->fields['container_reference']) && isset($this->fields['container_title'])) {
             $arr['container_reference'] = $this->fields['container_reference'];
-            $arr['container_title'] = $this->fields['container_title'];
+            $arr['container_title'] = $this->removeBracketsFromText($this->fields['container_title']);
            
         } else if (isset($this->fields['container_title'])) {
-            $arr['container_title'] = $this->fields['container_title'];
+            $arr['container_title'] = $this->removeBracketsFromText($this->fields['container_title']);
         }        
         return $arr;
     }
