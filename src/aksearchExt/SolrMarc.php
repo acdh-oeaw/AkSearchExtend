@@ -219,7 +219,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 } else if (!empty($ave->Z)) {
                     $holding = new HoldingData(new IlsHoldingId($ave->Z));
                     $holding->items[] = ItemData::fromAve($ave);     
-                    $results['electronic_holdings_extra'][$ave->Z] = $holding;
+                    $results['electronic_holdings_extra'][][$ave->Z] = $holding;
                 }
             }
         } 
@@ -227,30 +227,27 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         //-->
         return $results;
     }
-    
+   
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/20327
      * @param array $results
      */
     private function mergeElectronicHoldingsExtraData(array &$results) {        
-        foreach($results['electronic_holdings'] as $k => $v) {            
+       //portfolio fields
+        $pE = ['avek', 'aveA', 'aveB', 'aveC', 'aveD', 'aveE', 'aveF', 'aveG', 'aveH', 'aveI', 'aveJ', 'aveK', 'aveL'];
+        
+        foreach($results['electronic_holdings'] as $k => $v) {
             foreach($results['electronic_holdings'][$k]->items as $ik => $iv ) {
-                if(isset($results['electronic_holdings_extra'][$k]->items[$ik]) && $results['electronic_holdings_extra'][$k]->items[$ik]->mmsId === $k) {
-                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->avek)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->avek = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->avek :  "";
-                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveA)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveA = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveA :  "";
-                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveB)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveB = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveB :  "";
-                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveC)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveC = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveC :  "";
-                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveD)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveD = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveD :  "";
-                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveE)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveE = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveE :  "";
-                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveF)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveF = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveF :  "";
-                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveG)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveG = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveG :  "";
-                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveH)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveH = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveH :  "";
-                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveI)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveI = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveI :  "";
-                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveJ)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveJ = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveJ :  "";
-                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveK)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveK = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveK :  "";
-                    (empty($results['electronic_holdings'][$k]->items[$ik]->portfolio->aveL)) ? $results['electronic_holdings'][$k]->items[$ik]->portfolio->aveL = $results['electronic_holdings_extra'][$k]->items[$ik]->portfolio->aveL :  "";                 
+                if(count($results['electronic_holdings_extra']) > 0 ) {
+                    foreach($results['electronic_holdings_extra'] as $ek => $ev) {
+                        if(isset($ev[$k]->items[$ik]) && $ev[$k]->items[$ik]->mmsId === $k) {
+                            foreach($pE as $p) {
+                                (empty($results['electronic_holdings'][$k]->items[$ik]->portfolios[$ek]->{$p})) ? $results['electronic_holdings'][$k]->items[$ik]->portfolios[$ek]->{$p} = $ev[$k]->items[$ik]->portfolio->{$p} :  "";
+                            }
+                        }
+                    }
                 }
-            }           
+            }
         }
     }
 
