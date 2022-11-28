@@ -1098,37 +1098,48 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     private function fetchOrtVerlagFields(array $f, array $fetch): string {
         $str = "";
         foreach ($fetch as $k) {
-            if ($this->checkVariable($f['a'][$k]) && $this->checkVariable($f['b'][$k]) && $this->checkVariable($f['c'][$k])) {
-                $b = (is_array($f['b'][$k])) ? implode(',', $f['b'][$k]) : $f['b'][$k];
-                $c = (is_array($f['c'][$k])) ? implode(',', $f['c'][$k]) : $f['c'][$k];
-                $str = $f['a'][$k]. ' : '. $b.','.$c;
+           
+            $valA = ($this->checkVariable($f['a'][$k])) ? $this->checkVariable($f['a'][$k]) : null;
+            $valB = ($this->checkVariable($f['b'][$k])) ? $this->checkVariable($f['b'][$k]) : null;
+            $valC = ($this->checkVariable($f['c'][$k])) ? $this->checkVariable($f['c'][$k]) : null;
+            
+            if ($valA && $valB && $valC) {
+                $b = (is_array($f['b'][$k])) ? implode(', ', $f['b'][$k]) : $f['b'][$k];
+                $c = (is_array($f['c'][$k])) ? implode(', ', $f['c'][$k]) : $f['c'][$k];
+                $a = (is_array($f['a'][$k])) ? implode(', ', $f['a'][$k]) : $f['a'][$k];
+                $str = $a. ' : '. $b.','.$c;
             } 
-            else if ($this->checkVariable($f['a'][$k]) && $this->checkVariable($f['b'][$k])) {
-                $b = (is_array($f['b'][$k])) ? implode(',', $f['b'][$k]) : $f['b'][$k];
-                $str = $f['a'][$k]. ' : '. $b;
+            else if ($valA && $valB) {
+                $b = (is_array($f['b'][$k])) ? implode(', ', $f['b'][$k]) : $f['b'][$k];
+                $a = (is_array($f['a'][$k])) ? implode(', ', $f['a'][$k]) : $f['a'][$k];
+                $str = $a. ' : '. $b;
             }
-            else if ($this->checkVariable($f['a'][$k]) && $this->checkVariable($f['c'][$k])) {
-                $c = (is_array($f['c'][$k])) ? implode(',', $f['c'][$k]) : $f['c'][$k];
-                $str = $f['a'][$k]. ', '. $c;
+            else if ($valA && $valC) {
+                $c = (is_array($f['c'][$k])) ? implode(', ', $f['c'][$k]) : $f['c'][$k];
+                $a = (is_array($f['a'][$k])) ? implode(', ', $f['a'][$k]) : $f['a'][$k];
+                $str = $a. ', '. $c;
             }
-            else if ($this->checkVariable($f['b'][$k]) && $this->checkVariable($f['c'][$k])) {
-                $b = (is_array($f['b'][$k])) ? implode(',', $f['b'][$k]) : $f['b'][$k];
-                $c = (is_array($f['c'][$k])) ? implode(',', $f['c'][$k]) : $f['c'][$k];
+            else if ($valB && $valC) {
+                $b = (is_array($f['b'][$k])) ? implode(', ', $f['b'][$k]) : $f['b'][$k];
+                $c = (is_array($f['c'][$k])) ? implode(', ', $f['c'][$k]) : $f['c'][$k];
                 $str = $b. ', '. $c;
             }
-            else if ($this->checkVariable($f['a'][$k])) {
-                $str = $f['a'][$k];
+            else if ($valA) {
+                $a = (is_array($f['a'][$k])) ? implode(', ', $f['a'][$k]) : $f['a'][$k];
+                $str = $a;
             }
-            else if ($this->checkVariable($f['b'][$k])) {
-                $str = (is_array($f['b'][$k])) ? implode(',', $f['b'][$k]) : $f['b'][$k];
+            else if ($valB) {
+                $str = (is_array($f['b'][$k])) ? implode(', ', $f['b'][$k]) : $f['b'][$k];
             }
-            else if ($this->checkVariable($f['c'][$k])) {
-                $str = (is_array($f['c'][$k])) ? implode(',', $f['c'][$k]) : $f['c'][$k];
+            else if ($valC) {
+                $str = (is_array($f['c'][$k])) ? implode(', ', $f['c'][$k]) : $f['c'][$k];
             }
            
         }
         return $str;
     }
+    
+   
     
     private function checkVariable($var): bool {
         if(isset($var) && !empty($var)) {
@@ -1162,14 +1173,14 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                         
                             if($this->checkVariable($fs880b['b'][$fk]) && $this->checkVariable($fs264b['b'][$key2646])) {
                                 $str = "";
-                                $str = (is_array($fs880b['b'][$fk])) ? implode('/', $fs880b['b'][$fk]) : $fs880b['b'][$fk];
+                                $str = (is_array($fs880b['b'][$fk])) ? implode(', ', $fs880b['b'][$fk]) : $fs880b['b'][$fk];
                                 (!empty($str)) ? $str .= " / " : "" ;
-                                $str .= (is_array($fs264b['b'][$key2646])) ? implode('/', $fs264b['b'][$key2646]) : $fs264b['b'][$key2646];
+                                $str .= (is_array($fs264b['b'][$key2646])) ? implode(', ', $fs264b['b'][$key2646]) : $fs264b['b'][$key2646];
                                 $fetch[] =  $str;
                             } else if ($this->checkVariable($fs880b['b'][$fk])) {
-                                $fetch[] =  (is_array($fs880b['b'][$fk])) ? implode('/', $fs880b['b'][$fk]) : $fs880b['b'][$fk];
+                                $fetch[] =  (is_array($fs880b['b'][$fk])) ? implode(', ', $fs880b['b'][$fk]) : $fs880b['b'][$fk];
                             } else if ($this->checkVariable($fs264b['b'][$key2646])) {
-                                $fetch[] =  (is_array($fs264b['b'][$key2646])) ? implode('/', $fs264b['b'][$key2646]) : $fs264b['b'][$key2646];
+                                $fetch[] =  (is_array($fs264b['b'][$key2646])) ? implode(', ', $fs264b['b'][$key2646]) : $fs264b['b'][$key2646];
                             }                            
                         } elseif (isset($fs880b['b'][$fk])) {
                             $fetch[] = $fs880b['b'][$fk];
