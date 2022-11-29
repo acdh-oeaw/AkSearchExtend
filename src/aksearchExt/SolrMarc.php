@@ -847,7 +847,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 )
         );
     }
-
+    
     /**
      * Get the full title of the record.
      * 
@@ -883,7 +883,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         //first check if the actual 245 has a field 6, if yes then we fetch the 880
         $field880 = $this->getMarcFieldsAsObject($this->getMarcRecord(), 880, null, null, null);
         $str = "";
-        $fchk = ['a', 'b', 'c', 'n', 'p'];
+        $fchk = ['a', 'b', 'n', 'p', 'c'];
         $fields = [];
         
         foreach ($field880 as $k => $val) {
