@@ -34,6 +34,7 @@ use VuFind\RecordTab\ComponentParts;
 use aksearchExt\container\IlsHoldingId;
 use aksearchExt\container\HoldingData;
 use aksearchExt\container\ItemData;
+use aksearchExt\AcdhChHelper\Field880Helper;
 
 class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
@@ -876,36 +877,16 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/19490
+     * https://redmine.acdh.oeaw.ac.at/issues/21064
      * If the 245 has field 6 with value 880- then we will fetch the 880 title first
      * @return string
      */
     private function getTitle880() {
         //first check if the actual 245 has a field 6, if yes then we fetch the 880
         $field880 = $this->getMarcFieldsAsObject($this->getMarcRecord(), 880, null, null, null);
-        $str = "";
-        $fchk = ['a', 'b', 'n', 'p', 'c'];
-        $fields = [];
-        
-        foreach ($field880 as $k => $val) {
-            if (isset($val->{6})) {
-                foreach ($val->{6} as $v) {
-                    if (strpos($v, '245-') !== false) {                        
-                        $fields[] = $k;
-                    }
-                }
-            }
-        }
-       
-        foreach ($fields as $f) {
-            foreach ($fchk as $fc) {
-                if (isset($field880[$f]->$fc)) {
-                    $text = implode(' / ', $field880[$f]->$fc);
-                    //add the slash
-                    $str .= $text.' / ';
-                }
-            }
-        }
-        return rtrim($str, '/ ');
+        $f880Helper = new \aksearchExt\AcdhChHelper\Field880Helper($field880);
+        $str =  "";
+        return $f880Helper->getTitle880();
     }
 
     /**
