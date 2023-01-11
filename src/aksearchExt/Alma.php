@@ -259,4 +259,38 @@ class Alma extends \VuFind\ILS\Driver\Alma {
             throw new \Exception("Invalid date: $date");
         }
     }
+    
+    
+    /**
+     * We have to override the base method to fetch the values from our ALMA config.
+     * 
+     * https://redmine.acdh.oeaw.ac.at/issues/21372
+     * @param type $patron
+     * @return type
+     */    
+    public function getPickupLocations($patron)
+    {
+        // Variable for returning
+        $filteredPul = null;
+
+        // Get pickup locations from Alma
+        $pul = parent::getPickupLocations($patron);
+
+        // Get config "validPickupLocations" and check if it is set
+        $validPulS = $this->config['Holds']['validPickupLocations'] ?? null ?: null;
+        if ($validPulS) {
+            // Convert config "validPickupLocations" to array
+            $validPul = preg_split('/\s*,\s*/', $validPulS);
+
+            // Filter valid pickup locations
+            $filteredPul = array_filter($pul,
+                function($p) use ($validPul) {
+                    return in_array($p['locationID'], $validPul);
+                }
+            );
+        }
+
+        // Return result (resets the array keys with array_values)
+        return ($filteredPul) ? array_values($filteredPul) : $pul;
+    }
 }
