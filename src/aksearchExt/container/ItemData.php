@@ -79,7 +79,8 @@ class ItemData {
     static public function fromAlma(SimpleXMLElement $item): self {
         $data = new ItemData();
         $status  = (string) $item->item_data->base_status[0]->attributes()['desc'];
-        $duedate = $item->item_data->due_date ? Alma::parseDateStatic((string) $item->item_data->due_date) : null;
+        $duedate = $item->item_data->due_date ? $item->item_data->due_date : null;
+        //$duedate = $item->item_data->due_date ? Alma::parseDateStatic((string) $item->item_data->due_date) : null;
         if ($duedate && 'Item not in place' === $status) {
             $status = 'Checked Out';
         }
