@@ -130,7 +130,7 @@ class Alma extends \VuFind\ILS\Driver\Alma {
                 if ($offset < $itemsCount && $limit > 0) {
                     $this->fillHoldingData($holdingData);
                     for ($i = $start; $i < $end; $i++) {
-                        $item = ItemData::fromAlma($response->item[$i]);
+                        $item = ItemData::fromAlma($response->item[$i], $this);
                         if ($holdingId->lkr) {
                             $holdingData->lkrItems[] = $item;
                         } else {
@@ -188,10 +188,6 @@ class Alma extends \VuFind\ILS\Driver\Alma {
         }
     }
 
-    public function parseDate($date, $withTime = false) {
-        return self::parseDateStatic($date, $withTime);
-    }
-
     /**
      * Parse a date.
      *
@@ -200,7 +196,7 @@ class Alma extends \VuFind\ILS\Driver\Alma {
      *
      * @return string
      */
-    static public function parseDateStatic($date, $withTime = false) {
+    public function parseDate($date, $withTime = false) {
         // Remove trailing Z from end of date
         // e.g. from Alma we get dates like 2012-07-13Z without time, which is wrong)
         if (strpos($date, 'T') === false && substr($date, -1) === 'Z') {

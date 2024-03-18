@@ -74,14 +74,13 @@ class ItemData {
      * (GET /almaws/v1/bibs/{mms_id}/holdings/{holding_id}/items)
      * 
      * @param SimpleXMLElement $item
+     * @param Alma $alma
      * @return self
      */
-    static public function fromAlma(SimpleXMLElement $item): self {
+    static public function fromAlma(SimpleXMLElement $item, Alma $alma): self {
         $data = new ItemData();
         $status  = (string) $item->item_data->base_status[0]->attributes()['desc'];
-        $duedate = $item->item_data->due_date ? $item->item_data->due_date : null;
-        //Alma::parseDateStatic throws an exception to any date passed, was not able to debug :(
-        //$duedate = $item->item_data->due_date ? Alma::parseDateStatic((string) $item->item_data->due_date) : null;
+        $duedate = $item->item_data->due_date ? $alma->parseDate((string) $item->item_data->due_date) : null;
         if ($duedate && 'Item not in place' === $status) {
             $status = 'Checked Out';
         }
