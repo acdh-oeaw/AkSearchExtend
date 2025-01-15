@@ -31,6 +31,7 @@ use aksearchExt\container\HoldingData;
 use aksearchExt\container\IlsHoldingId;
 use aksearchExt\container\ItemData;
 
+
 class Alma extends \VuFind\ILS\Driver\Alma {
 
     public function hasHoldings($ids): bool {
@@ -82,66 +83,67 @@ class Alma extends \VuFind\ILS\Driver\Alma {
                     throw $e;
                 }
             }
-            foreach ($holdings->holding ?? [] as $holdingData) {
+            foreach ($holdings->holding ?? [] as $rawHoldingData) {
                 $holdingId                                   = clone $id;
-                $holdingId->holdingId                        = (string) $holdingData->holding_id;
-                $libraries[(string) $holdingData->library][] = new HoldingData($holdingId, (string) $holdingData->$holdingsOrderBy);
-            }
-        }
-        ksort($libraries);
-        foreach ($libraries as &$i) {
-            // non-lkr first, within (non)lkr group by the orderBy property
-            usort($i, fn($a, $b) => $a->id->lkr !== $b->id->lkr ? $a->id->lkr <=> $b->id->lkr : $b->orderBy <=> $a->orderBy);
-        }
-        unset($i);
-
-        // get all items library by library and holding by holding
-        $orderBy   = $this->config['Holdings']['itemsOrderBy'] ?? 'description,enum_a,enum_b';
-        $direction = $this->config['Holdings']['itemsOrderByDirection'] ?? 'desc';
-        $limit     = (int) ($options['itemLimit'] ?? 0);
-        $offset    = (int) ($options['offset'] ?? 0);
-        foreach ($libraries as $holdings) {
-            foreach ($holdings as $holdingData) {
-                /* @var HoldingData $holdingData */
-                $holdingId = $holdingData->id;
-                // we don't use limit and offset as the Alma REST API applies
-                // them before the order_by (sic!)
-                $apiCall   = "/bibs/$holdingId->mmsId/holdings/$holdingId->holdingId/items?" .
-                    "order_by=$orderBy&direction=$direction" .
-                    "&expand=due_date&limit=10000";
-                $response  = $this->makeRequest($apiCall);
-
-                if (!($response instanceof \SimpleXMLElement)) {
+                $holdingId->holdingId                        = (string) $rawHoldingData->holding_id;
+                $holdingData                                 = new HoldingData($holdingId, (string) $rawHoldingData->$holdingsOrderBy);
+                $this->fillHoldingData($holdingData);
+                $libraries[(string) $rawHoldingData->library][$holdingId->holdingId] = $holdingData;
+                // items
+                if (empty($holdingId->mmsId)) {
                     continue;
                 }
-                /* @var SimpleXMLElement $response */
-                if ($holdingId->lkr) {
-                    $this->filterLkr($response, $holdingId);
-                    $itemsCount = (int) $response->attributes()->total_record_count;
-                } else {
-                    // handle also non-itemized holdings
-                    $itemsCount = max(1, (int) $response->attributes()->total_record_count);
-                }
-                $end              = min($offset + $limit, count($response->item));
-                $start            = min($end, $offset);
-                //print_r(["/bibs/$holdingId->mmsId/holdings/$holdingId->holdingId/items", 'itemsCount' => $itemsCount, 'start'      => $start, 'end'        => $end,                    'limit'      => $limit, 'offset'     => $offset]);
-                $results['total'] += $itemsCount;
 
-                if ($offset < $itemsCount && $limit > 0) {
-                    $this->fillHoldingData($holdingData);
-                    for ($i = $start; $i < $end; $i++) {
-                        $item = ItemData::fromAlma($response->item[$i], $this);
+                $orderBy   = $this->config['Holdings']['itemsOrderBy'] ?? 'description,enum_a,enum_b';
+                $direction = $this->config['Holdings']['itemsOrderByDirection'] ?? 'desc';
+                $apiCall   = "/bibs/$holdingId->mmsId/holdings/$holdingId->holdingId/items?" .
+                             "order_by=$orderBy&direction=$direction" .
+                             "&expand=due_date&limit=10000";
+                // ALMA items API is terribly broken
+                // Not only it applies ordering after paging (sic!)
+                // but also has some issues with applying the offset when no ordering is specified
+                // This makes it impossible to use the /bibs/{mmsId}/holdings/all/items
+                // and forces us into making a terribly slow per-holding requests
+                $response  = $this->makeRequest($apiCall);
+                if ($response instanceof \SimpleXMLElement) {
+                    foreach ($response->item as $i) {
+                        $holdingData = $libraries[(string) $i->item_data->library][(string) $i->holding_data->holding_id];
+                        // filter LKR resources
+                        $itemValues = [
+                            (string) $i->item_data->barcode,
+                            (string) $i->item_data->enumeration_a,
+                            (string) $i->item_data->enumeration_b,
+                        ];
+                        if ($holdingId->lkr && count(array_intersect($holdingData->id->itemFilter, $itemValues)) === 0) {
+                            continue;
+                        }
+
+                        $item = ItemData::fromAlma($i, $this);
                         if ($holdingId->lkr) {
                             $holdingData->lkrItems[] = $item;
                         } else {
                             $holdingData->items[] = $item;
                         }
                     }
-                    $results['holdings'][] = $holdingData;
-                    $limit                 = max(0, $limit - max(1, $end - $start));
                 }
+            }
+        }
+               
+        ksort($libraries);
+        foreach ($libraries as &$i) {
+            // non-lkr first, within (non)lkr group by the orderBy property
+            usort($i, fn($a, $b) => $a->id->lkr !== $b->id->lkr ? $a->id->lkr <=> $b->id->lkr : $b->orderBy <=> $a->orderBy);
+            $i = array_combine(array_map(fn($x) => (string) $x->id->holdingId, $i), $i);
+        }
+        unset($i);
 
-                $offset = max(0, $offset - $itemsCount);
+        foreach ($libraries as $i) {
+            foreach ($i as $j) {
+                if ($j->id->lkr && count($j->lkrItems) + count($j->items) === 0) {
+                    continue;
+                }
+                $results['holdings'][] = $j;
+                $results['total'] += max(count($j->items), count($j->lkrItems), 1);
             }
         }
 
@@ -149,34 +151,6 @@ class Alma extends \VuFind\ILS\Driver\Alma {
         // because Alma REST API doesn't return the URL
         //DEBUG: print_r($results);
         return $results;
-    }
-
-    /**
-     * Filters Alma items REST API response leaving only items belonging to
-     * a given LKR.
-     * 
-     * @param SimpleXMLElement $response
-     * @param IlsHoldingId $id
-     * @return void
-     */
-    private function filterLkr(SimpleXMLElement $response, IlsHoldingId $id): void {
-        $toRemove = [];
-        $n        = 0;
-        foreach ($response->item as $item) {
-            $itemValues = [
-                (string) $item->item_data->barcode,
-                (string) $item->item_data->enumeration_a,
-                (string) $item->item_data->enumeration_b,
-            ];
-            if (count(array_intersect($id->itemFilter, $itemValues)) === 0) {
-                $toRemove[] = $n;
-            }
-            $n++;
-        }
-        $response->attributes()->total_record_count = ((int) $response->attributes()->total_record_count) - count($toRemove);
-        while (count($toRemove) > 0) {
-            unset($response->item[array_pop($toRemove)]);
-        }
     }
 
     private function fillHoldingData(HoldingData $holdingData): void {
@@ -290,3 +264,4 @@ class Alma extends \VuFind\ILS\Driver\Alma {
         return ($filteredPul) ? array_values($filteredPul) : $pul;
     }
 }
+
