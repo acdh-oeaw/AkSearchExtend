@@ -46,6 +46,7 @@ class Module {
                             'aksearchExt\SolrMarc' => 'VuFind\RecordDriver\SolrDefaultFactory'
                         ],
                         'aliases'    => [
+                            'solrmarc' => 'aksearchExt\SolrMarc',
                             'VuFind\RecordDriver\SolrMarc' => 'aksearchExt\SolrMarc'
                         ],
                         'delegators' => [
