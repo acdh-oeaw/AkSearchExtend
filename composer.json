@@ -11,7 +11,7 @@
         }
     ],
     "require": {
-        "php": ">=7",
+        "php": ">=8.1",
         "vufind-org/vufind-marc": "^1.1"
     },
     "autoload": {
