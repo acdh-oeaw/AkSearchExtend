@@ -11,11 +11,15 @@
         }
     ],
     "require": {
-        "php": ">=7"
+        "php": ">=7",
+        "vufind-org/vufind-marc": "^1.1"
     },
     "autoload": {
         "psr-4": {
             "aksearchExt\\": "src/aksearchExt"
         }
+    },
+    "require-dev": {
+        "phpstan/phpstan": "*"
     }
 }
