@@ -74,18 +74,18 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $retVal = [];
         $urls = $this->getMarcReader()->getFields('856');
         foreach ($urls as $urlField) {
-            $url = $urlField->getSubfield('u');
+            $url = null; //$urlField->getSubfield('u'); //TODO#5
             if (!is_object($url)) {
                 continue;
             }
             $url = $url->getData();
             foreach ($labelSubfields as $subfield) {
-                $label = $urlField->getSubfield($subfield);
+                $label = null; //$urlField->getSubfield($subfield); //TODO#5
                 if ($label) {
                     break;
                 }
             }
-            $label = $label ? $label->getData() : $url;
+            $label = $label ? $label->getData() : $url; //TODO#5
             $retVal[] = ['url' => $url, 'desc' => $label];
         }
         return $retVal;
@@ -163,7 +163,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         if (!in_array($caller, self::$acIdCallers)) {
             return parent::getUniqueID();
         }
-        return $this->getMarcReader()->getField(9)->getData();
+        return $this->getMarcReader()->getField(9);//->getData(); //TODO#5
     }
 
     /**
@@ -385,12 +385,14 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 continue;
             }
             $fieldData = new \stdClass();
+            /*TODO#5
             foreach ($i->getSubfields() as $subfield => $value) {
                 if (!isset($fieldData->$subfield)) {
                     $fieldData->$subfield = [];
                 }
                 $fieldData->$subfield[] = $value->getData();
             }
+             */
             foreach ($fieldData as $k => &$v) {
                 if (count($v) === 1 && ($singleValueAsLiteral === true || is_array($singleValueAsLiteral) && in_array($k, $singleValueAsLiteral))) {
                     $v = $v[0];
@@ -729,7 +731,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             $ind2 = $subjectField->getIndicator(2);
 
             if (is_numeric($ind1) && is_numeric($ind2)) {
-                $subfields = $subjectField->getSubfields('[axvtyzbcgh0]', true);
+                $subfields = []; //$subjectField->getSubfields('[axvtyzbcgh0]', true); //TODO#5
                 $subfieldData = [];
                 foreach ($subfields as $subfield) {
                     $subfieldData[] = $subfield->getData();
@@ -745,7 +747,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             $ind2 = $subjectField982->getIndicator(2);
             if (empty(trim($ind1)) && empty(trim($ind2))) {
 
-                $subfields = $subjectField982->getSubfields('a', false);
+                $subfields = []; //$subjectField982->getSubfields('a', false); //TODO#5
                 if (!empty($subfields)) {
                     $subfieldData = [];
                     $tokenCount = 0;
