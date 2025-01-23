@@ -57,16 +57,16 @@ class Module {
                     ],
                     'ils_driver'   => [
                         'factories' => [
-                            'aksearchExt\Alma' => 'VuFind\ILS\Driver\AlmaFactory'
+                            'aksearchExt\Alma' => 'aksearchExt\AlmaFactory'
                         ],
                         'aliases'   => [
+                            'alma' => 'aksearchExt\Alma',
                             'VuFind\ILS\Driver\Alma' => 'aksearchExt\Alma'
                         ]
                     ],
                     'recordtab'    => [
                         'factories' => [
                             'aksearchExt\RecordTab\Exemplarspezifika' => 'VuFind\RecordTab\HoldingsILSFactory',
-                            
                             'aksearchExt\RecordTab\HoldingsILS'  => 'VuFind\RecordTab\HoldingsILSFactory',
                         ],
                         'aliases'   => [
@@ -79,3 +79,4 @@ class Module {
         ];
     }
 }
+
