@@ -238,13 +238,12 @@ class Alma extends \VuFind\ILS\Driver\Alma {
      * @param type $patron
      * @return type
      */    
-    public function getPickupLocations($patron)
-    {
+    public function getPickupLocations($patron, $holdDetails = null) {
         // Variable for returning
         $filteredPul = null;
 
         // Get pickup locations from Alma
-        $pul = parent::getPickupLocations($patron);
+        $pul = parent::getPickupLocations($patron, $holdDetails);
 
         // Get config "validPickupLocations" and check if it is set
         $validPulS = $this->config['Holds']['validPickupLocations'] ?? null ?: null;
