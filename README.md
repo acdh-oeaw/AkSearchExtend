@@ -86,3 +86,19 @@ To be able to live test your module:
     * Your module's code mounted under `/usr/local/vufind/vendor/{your-organization}/{your-composer-package-name}`.
     * `APPLICATION_ENV` set to `development` (which would turn off Zend2 classmap caching and save you a lot of headache).
 
+## Usingn phpstan for static code analysis
+
+The phpstan needs access to the AkSearch-core module as our code depends on it, so:
+
+* Clone the AkSearch-core in the repository root
+  ```
+  git clone --depth 1 -b aksearch-10 https://biapps.arbeiterkammer.at/gitlab/open/aksearch/module-core.git aksearch
+  ```
+* Obtain phpstan and vufind
+  ```
+  composer update
+  ```
+* Run phpstan using provided config file which assures proper loading of AkSearch anf VuFind classes
+  ```
+  vendor/bin/phpstan analyze -c phpstan.neon -l 4 src/
+  ```

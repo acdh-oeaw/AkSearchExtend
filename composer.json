@@ -20,6 +20,13 @@
         }
     },
     "require-dev": {
-        "phpstan/phpstan": "*"
+        "phpstan/phpstan": "*",
+        "vufind/vufind": "^10",
+        "ahand/mobileesp": "dev-master"
+    },
+    "config": {
+        "allow-plugins": {
+            "wikimedia/composer-merge-plugin": true
+        }
     }
 }
