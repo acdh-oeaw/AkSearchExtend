@@ -127,7 +127,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * Check the actual resource is Open Access or not
      */
     public function getOpenAccessData(): bool {
-        $oa = $this->getMarcFieldsAsObject($this->getMarcReader(), 506, null, null, [
+        $oa = $this->getMarcFieldsAsObject('506', null, null, [
             'f']);
         if (isset($oa[0]->f) && strtolower($oa[0]->f) == "unrestricted online access") {
             return true;
@@ -139,7 +139,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * https://redmine.acdh.oeaw.ac.at/issues/20340
      */
     public function isPeerReviewed(): bool {
-        $pr = $this->getMarcFieldsAsObject($this->getMarcReader(), 500, null, null, [
+        $pr = $this->getMarcFieldsAsObject('500', null, null, [
             'a']);
 
         foreach ($pr as $v) {
@@ -166,8 +166,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         if (!in_array($caller, self::$acIdCallers)) {
             return parent::getUniqueID();
         }
-        #exit($this->getMarcReader()->getField(9));
-        return $this->getMarcReader()->getField(9); //->getData(); //TODO#5
+        return $this->getMarcReader()->getField('009');
     }
 
     /**
@@ -181,16 +180,14 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         if (count($ids) === 0) {
             $ids[] = new IlsHoldingId($this->getUniqueID());
 
-            $marc       = $this->getMarcReader();
-            $lkrRecords = $this->getMarcFieldsAsObject($marc, 773, 1, 8, ['w']);
-            //print_r($lkrRecords);
+            $lkrRecords = $this->getMarcFieldsAsObject('773', 1, 8, ['w']);
             foreach ($lkrRecords as $lkrRecord) {
                 if (empty($lkrRecord->w) || empty($lkrRecord->g)) {
                     continue;
                 }
                 $ctrlnum = preg_replace('/^.*[)]/', '', $lkrRecord->w);
                 $param   = new ParamBag(['fl' => 'id']);
-                $record  = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, $param)->first();
+                $record  = $this->searchService->invoke(new \VuFindSearch\Command\SearchCommand('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, $param))->getResult()->first();
                 if ($record !== null) {
                     // there might be many subfield g values (!)
                     // for now we optimistically assume the prefix (which we skip using preg_replace())
@@ -199,7 +196,6 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 }
             }
         }
-        //print_r($ids);
         return $ids;
     }
 
@@ -215,11 +211,10 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         //<-- Electronic holdings
         //    https://redmine.acdh.oeaw.ac.at/issues/19474
-        $marc = $this->getMarcReader();
-        $ave  = $this->getMarcFieldsAsObject($marc, 'AVE');
+        $ave = $this->getMarcFieldsAsObject('AVE');
 
         if (count($ave) > 0) {
-            foreach ($this->getMarcFieldsAsObject($marc, 'AVE') as $ave) {
+            foreach ($this->getMarcFieldsAsObject('AVE') as $ave) {
                 if (!empty($ave->x) && !empty($ave->Z)) {
                     $holding                                 = new HoldingData(new IlsHoldingId($ave->Z));
                     $holding->items[]                        = ItemData::fromAve($ave);
@@ -257,10 +252,9 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * Check if we have electronic data, if yes then fetch the values
      */
     public function hasElectronicHoldings(): bool {
-        $marc = $this->getMarcReader();
-        $ave  = $this->getMarcFieldsAsObject($marc, 'AVE');
+        $ave = $this->getMarcFieldsAsObject('AVE');
         if (count($ave) > 0) {
-            foreach ($this->getMarcFieldsAsObject($marc, 'AVE') as $ave) {
+            foreach ($this->getMarcFieldsAsObject('AVE') as $ave) {
                 if (!empty($ave->x)) {
                     return true;
                 }
@@ -275,9 +269,9 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      */
     public function is911992(): bool {
         $active = false;
-        if (count($this->getMarcFieldsAsObject($this->getMarcReader(), '991', null, null)) > 0) {
+        if (count($this->getMarcFieldsAsObject('991', null, null)) > 0) {
             $active = true;
-        } else if (count($this->getMarcFieldsAsObject($this->getMarcReader(), '992', null, null)) > 0) {
+        } else if (count($this->getMarcFieldsAsObject('992', null, null)) > 0) {
             $active = true;
         }
 
@@ -335,8 +329,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         foreach ($data as &$v) {
             if (isset($v->items)) {
                 foreach ($v->items as &$iv) {
-                    $iv->exLibris             = $this->getFieldsByKeysAndField($marc, $keys991, '991');
-                    $iv->exemplarbeschreibung = $this->getFieldsByKeysAndField($marc, $keys992, '992');
+                    $iv->exLibris             = $this->getFieldsByKeysAndField($keys991, '991');
+                    $iv->exemplarbeschreibung = $this->getFieldsByKeysAndField($keys992, '992');
                 }
             }
         }
@@ -346,10 +340,9 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @param array<string> $keys
      * @return array<string, array<string>>
      */
-    private function getFieldsByKeysAndField(MarcReader $marc, array $keys,
-                                             string $field): array {
+    private function getFieldsByKeysAndField(array $keys, string $field): array {
         $values = [];
-        foreach ($this->getMarcFieldsAsObject($marc, $field, null, null) as $field) {
+        foreach ($this->getMarcFieldsAsObject($field, null, null) as $field) {
             foreach ($keys as $k) {
                 if (!empty($field->$k)) {
                     $values[$k][] = $field->$k;
@@ -372,12 +365,13 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * 
      * @return array<\stdClass>
      */
-    private function getMarcFieldsAsObject(MarcReader $marc, string $field,
-                                           string | null $ind1 = null,
-                                           string | null $ind2 = null,
+    private function getMarcFieldsAsObject(string $field,
+                                           int | null $ind1 = null,
+                                           int | null $ind2 = null,
                                            bool | array $singleValueAsLiteral = true): array {
+        $marc   = $this->getMarcReader();
         $fields = [];
-        foreach ($marc->getFields($field) as $i) {
+        foreach ($marc->getFields(sprintf('%03d', $field)) as $i) {
             if (is_array($i) && (!empty($ind1) && intval($i['i1']) !== $ind1 || !empty($ind2) && intval($i['i2']) !== $ind2)) {
                 continue;
             }
@@ -660,8 +654,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * Extend the Description tab with the responsibility Note
      */
     public function getExtraDescriptionData(): array {
-        $marc  = $this->getMarcReader();
-        $value = $this->getMarcFieldsAsObject($marc, '245', null, null);
+        $value = $this->getMarcFieldsAsObject('245', null, null);
 
         $return = array();
         if (count($value) > 0) {
@@ -762,9 +755,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * Get the record view subtitle
      */
     public function getSubTitle(): string {
-        $marc = $this->getMarcReader();
-        $st   = $this->getMarcFieldsAsObject($marc, 249, null, null, false);
-        $str  = "";
+        $st  = $this->getMarcFieldsAsObject('249', null, null, false);
+        $str = "";
 
         foreach ($st as $k => $v) {
             if (isset($v->a) && isset($v->v)) {
@@ -812,7 +804,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * Get the Record view title
      */
     public function getWholeTitle(): string {
-        $field245C = $this->getMarcFieldsAsObject($this->getMarcReader(), 245, null, null, [
+        $field245C = $this->getMarcFieldsAsObject('245', null, null, [
             'c']);
         if (isset($field245C[0]->c)) {
             $field245C = $field245C[0]->c;
@@ -860,8 +852,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      */
     private function getTitle880(): string {
         //first check if the actual 245 has a field 6, if yes then we fetch the 880
-        $field880   = $this->getMarcFieldsAsObject($this->getMarcReader(), 880, null, null, false);
-        $f880Helper = new \aksearchExt\AcdhChHelper\Field880Helper($field880);
+        $field880   = $this->getMarcFieldsAsObject('880', null, null, false);
+        $f880Helper = new Field880Helper($field880);
         $str        = "";
         return $f880Helper->getTitle880();
     }
@@ -872,7 +864,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      */
     public function getTitleAddition(): string {
         $str   = "";
-        $field = $this->getFieldsByKeysAndField($this->getMarcReader(), ['b'], '249');
+        $field = $this->getFieldsByKeysAndField(['b'], '249');
 
         if (isset($field['b']) && count($field['b']) > 0) {
             foreach ($field['b'] as $f) {
@@ -888,7 +880,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      */
     public function getStatementOfResponsibility(): string {
         $str   = "";
-        $field = $this->getFieldsByKeysAndField($this->getMarcReader(), ['c'], '249');
+        $field = $this->getFieldsByKeysAndField(['c'], '249');
 
         if (isset($field['c']) && count($field['c']) > 0) {
             foreach ($field['c'] as $f) {
@@ -1021,8 +1013,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             $st = strstr($st, '/', true);
         }
 
-        $fs880_6 = $this->getFieldsByKeysAndField($this->getMarcReader(), ['6', 'a',
-            'b', 'c', 'n', 'p'], '880');
+        $fs880_6 = $this->getFieldsByKeysAndField(['6', 'a', 'b', 'c', 'n', 'p'], '880');
         $fetch   = [];
         if (isset($fs880_6['6'])) {
             foreach ($fs880_6['6'] as $fk => $fv) {
@@ -1092,8 +1083,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         //old basic solution
         //return $this->getPublicationInfo('b');
 
-        $fs880b = $this->getFieldsByKeysAndField($this->getMarcReader(), ['b', '6'], '880');
-        $fs264b = $this->getFieldsByKeysAndField($this->getMarcReader(), ['b', '6'], '264');
+        $fs880b = $this->getFieldsByKeysAndField(['b', '6'], '880');
+        $fs264b = $this->getFieldsByKeysAndField(['b', '6'], '264');
         $fetch  = [];
 
         if (isset($fs880b['6'])) {
