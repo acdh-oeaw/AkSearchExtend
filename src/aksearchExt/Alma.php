@@ -56,8 +56,6 @@ class Alma extends \VuFind\ILS\Driver\Alma {
      * See docs/holdings.md
      * 
      * @param array<container\IlsHoldingId> $ids
-     * @param string $patron
-     * @param array $options
      * @return array
      */
     public function getHolding($ids, $patron = null, array $options = []) {
@@ -85,10 +83,10 @@ class Alma extends \VuFind\ILS\Driver\Alma {
             }
             foreach ($holdings->holding ?? [] as $rawHoldingData) {
                 $holdingId                                   = clone $id;
-                $holdingId->holdingId                        = (string) $rawHoldingData->holding_id;
+                $holdingId->holdingId                        = (int) $rawHoldingData->holding_id;
                 $holdingData                                 = new HoldingData($holdingId, (string) $rawHoldingData->$holdingsOrderBy);
                 $this->fillHoldingData($holdingData);
-                $libraries[(string) $rawHoldingData->library][$holdingId->holdingId] = $holdingData;
+                $libraries[(string) $rawHoldingData->library][(string) $holdingId->holdingId] = $holdingData;
                 // items
                 if (empty($holdingId->mmsId)) {
                     continue;
@@ -165,7 +163,7 @@ class Alma extends \VuFind\ILS\Driver\Alma {
     /**
      * Parse a date.
      *
-     * @param string  $date     Date to parse
+     * @param mixed  $date     Date to parse
      * @param boolean $withTime Add time to return if available?
      *
      * @return string
@@ -186,7 +184,7 @@ class Alma extends \VuFind\ILS\Driver\Alma {
         $timestampMs = "/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z$/";
         // e. g. 2017-07-09T18:00:00
 
-        if ($date == null || $date == '') {
+        if (empty($date)) {
             return '';
         } elseif (preg_match($compactDate, $date) === 1) {
             return $this->dateConverter->convertToDisplayDate('Ynd', $date);
@@ -235,10 +233,8 @@ class Alma extends \VuFind\ILS\Driver\Alma {
      * We have to override the base method to fetch the values from our ALMA config.
      * 
      * https://redmine.acdh.oeaw.ac.at/issues/21372
-     * @param type $patron
-     * @return type
      */    
-    public function getPickupLocations($patron, $holdDetails = null) {
+    public function getPickupLocations($patron, $holdDetails = null): array {
         // Variable for returning
         $filteredPul = null;
 

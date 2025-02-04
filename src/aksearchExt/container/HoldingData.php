@@ -44,13 +44,13 @@ class HoldingData implements \ArrayAccess {
     public string $holdingsPrefix    = '';
     public string $holdingsNotes     = '';
     public string $orderBy           = '';
-    public ?IlsHoldingId $id                = null;
+    public ?IlsHoldingId $id         = null;
 
     /**
      * 
      * @var array<ItemData>
      */
-    public array $items    = [];
+    public array $items = [];
 
     /**
      * 
@@ -135,4 +135,3 @@ class HoldingData implements \ArrayAccess {
         unset($this->$offset);
     }
 }
-
