@@ -166,7 +166,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         if (!in_array($caller, self::$acIdCallers)) {
             return parent::getUniqueID();
         }
-        exit($this->getMarcReader()->getField(9));
+        #exit($this->getMarcReader()->getField(9));
         return $this->getMarcReader()->getField(9); //->getData(); //TODO#5
     }
 
