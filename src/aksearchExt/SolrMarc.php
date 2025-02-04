@@ -511,6 +511,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     private function getSecondaryAuthorData(array &$contributors, array $data,
                                             string $entity): array {
         if (count($data) > 0) {
+            // make phpstan happy
+            $entity = $name   = $role   = $auth   = '';
             foreach ($data as $key => $value) {
                 if (($key % 3) == 0) { // First of 3 values
                     $name = $value;
