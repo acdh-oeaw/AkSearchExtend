@@ -129,7 +129,9 @@ class Alma extends \VuFind\ILS\Driver\Alma {
             }
         }
                
-        ksort($libraries);
+        $libsOrder = explode("\n", file_get_contents(__DIR__ . '/libsOrder.txt'));
+        $libsOrder = array_combine($libsOrder, range(0, count($libsOrder) - 1));
+        uksort($libraries, fn($a, $b) => ($libsOrder[$a] ?? 9999) <=> ($libsOrder[$b] ?? 9999));
         foreach ($libraries as &$i) {
             // non-lkr first, within (non)lkr group by the orderBy property
             usort($i, fn($a, $b) => $a->id->lkr !== $b->id->lkr ? $a->id->lkr <=> $b->id->lkr : $b->orderBy <=> $a->orderBy);
