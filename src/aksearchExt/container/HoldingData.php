@@ -120,7 +120,7 @@ class HoldingData implements \ArrayAccess {
     }
 
     public function offsetExists(mixed $offset): bool {
-        return isset($this->offset);
+        return isset($this->$offset);
     }
 
     public function offsetGet(mixed $offset): mixed {
