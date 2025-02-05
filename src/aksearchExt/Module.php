@@ -41,12 +41,12 @@ class Module {
             ],
             'vufind'          => [
                 'plugin_managers' => [
-                    'recorddriver' => [
+                    'recorddriver'      => [
                         'factories'  => [
                             'aksearchExt\SolrMarc' => 'VuFind\RecordDriver\SolrDefaultFactory'
                         ],
                         'aliases'    => [
-                            'solrmarc' => 'aksearchExt\SolrMarc',
+                            'solrmarc'                     => 'aksearchExt\SolrMarc',
                             'VuFind\RecordDriver\SolrMarc' => 'aksearchExt\SolrMarc'
                         ],
                         'delegators' => [
@@ -55,23 +55,29 @@ class Module {
                             ]
                         ]
                     ],
-                    'ils_driver'   => [
+                    'ils_driver'        => [
                         'factories' => [
                             'aksearchExt\Alma' => 'aksearchExt\AlmaFactory'
                         ],
                         'aliases'   => [
-                            'alma' => 'aksearchExt\Alma',
+                            'alma'                   => 'aksearchExt\Alma',
                             'VuFind\ILS\Driver\Alma' => 'aksearchExt\Alma'
                         ]
                     ],
-                    'recordtab'    => [
+                    'recordtab'         => [
                         'factories' => [
                             'aksearchExt\RecordTab\Exemplarspezifika' => 'VuFind\RecordTab\HoldingsILSFactory',
-                            'aksearchExt\RecordTab\HoldingsILS'  => 'VuFind\RecordTab\HoldingsILSFactory',
+                            'aksearchExt\RecordTab\HoldingsILS'       => 'VuFind\RecordTab\HoldingsILSFactory',
                         ],
                         'aliases'   => [
                             'exemplarspezifika' => 'aksearchExt\RecordTab\Exemplarspezifika',
-                            'holdingsils' => 'aksearchExt\RecordTab\HoldingsILS',
+                            'holdingsils'       => 'aksearchExt\RecordTab\HoldingsILS',
+                        ]
+                    ],
+                    'search_facetcache' => [
+                        'aliases' => [
+                            'solr'                          => 'aksearchExt\Search\FacetCache',
+                            'VuFind\Search\Solr\FacetCache' => 'aksearchExt\Search\FacetCache'
                         ]
                     ],
                 ],
@@ -79,4 +85,3 @@ class Module {
         ];
     }
 }
-
