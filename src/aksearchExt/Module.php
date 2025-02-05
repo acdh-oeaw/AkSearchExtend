@@ -74,12 +74,6 @@ class Module {
                             'holdingsils'       => 'aksearchExt\RecordTab\HoldingsILS',
                         ]
                     ],
-                    'search_facetcache' => [
-                        'aliases' => [
-                            'solr'                          => 'aksearchExt\Search\FacetCache',
-                            'VuFind\Search\Solr\FacetCache' => 'aksearchExt\Search\FacetCache'
-                        ]
-                    ],
                 ],
             ],
         ];

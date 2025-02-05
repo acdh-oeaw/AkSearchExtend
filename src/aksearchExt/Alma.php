@@ -126,9 +126,7 @@ class Alma extends \VuFind\ILS\Driver\Alma {
             }
         }
 
-        $libsOrder = explode("\n", file_get_contents(__DIR__ . '/libsOrder.txt'));
-        $libsOrder = array_combine($libsOrder, range(0, count($libsOrder) - 1));
-        uksort($libraries, fn($a, $b) => ($libsOrder[$a] ?? 9999) <=> ($libsOrder[$b] ?? 9999));
+        $this->sortLibraries($libraries);
         foreach ($libraries as &$i) {
             // non-lkr first, within (non)lkr group by the orderBy property
             usort($i, fn($a, $b) => $a->id->lkr !== $b->id->lkr ? $a->id->lkr <=> $b->id->lkr : $b->orderBy <=> $a->orderBy);
@@ -257,5 +255,30 @@ class Alma extends \VuFind\ILS\Driver\Alma {
 
         // Return result (resets the array keys with array_values)
         return ($filteredPul) ? array_values($filteredPul) : $pul;
+    }
+
+    /**
+     * See https://redmine.acdh.oeaw.ac.at/issues/23897
+     * 
+     * Quite an ugly brut-force hardcoding but as we need to access configuration 
+     * of a module which is completely unrelated according to the VuFind logic 
+     * I am too lazy to look for a nicer implementation.
+     * 
+     * @param array<string, mixed> $libraries
+     * @return array<string, int>
+     */
+    protected function sortLibraries(array &$libraries): void {
+        $path = getenv('VUFIND_LOCAL_DIR') . '/config/vufind/facets.ini';
+        if (file_exists($path)) {
+            $libsOrder = explode("\n", file_get_contents($path));
+            $libsOrder = array_filter($libsOrder, fn($x) => str_starts_with(trim($x), 'limitOrderOverride[institution]'));
+            $libsOrder = explode('=', (string) reset($libsOrder));
+            $libsOrder = explode('::', trim((string) end($libsOrder)));
+            $libsOrder = array_flip($libsOrder);
+
+            if (count($libsOrder) > 1) {
+                uksort($libraries, fn($a, $b) => ($libsOrder[$a] ?? 9999) <=> ($libsOrder[$b] ?? 9999));
+            }
+        }
     }
 }
