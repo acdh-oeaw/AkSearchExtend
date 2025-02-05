@@ -9,12 +9,7 @@ Can also serve as an example of extending VuFind with your own module being load
 * Tuned version of the SolrMarc class (`aksearchExt\SolrMarc`)
 * Tuned version of the ILS driver class (`aksearchExt\Alma`)
 * Additional record view tab (`aksearchExt\RecordTab\Exemplarspezifika`)
-* Tuned version of the `VuFindSearch\Backend\Solr\LuceneSyntaxHelper` class resolving the
-  [search with slash](https://redmine.acdh.oeaw.ac.at/issues/20174) issue.  
-  * As it can't be easily overriden with a new code, it is copied to
-    `{FuVindDir}/module/VuFindSearch/src/VuFindSearch/Backend/Solr/LuceneSyntaxHelper.php`
-    by the [Dockerfile](https://github.com/acdh-oeaw/AkSearchWeb/blob/main/Dockerfile) creating the deployment docker image 
-    (which is admitedly very ugly but avoids overriding of the whole VuFind/AkSearch Solr search backend classes stack).
+* and more (see the class overrides defined in the `Module.php` for a full picture)
 
 The detailed description of particular features is included in the `docs` folder.
 
@@ -22,17 +17,17 @@ The detailed description of particular features is included in the `docs` folder
 
 Remark - description below applies to the current AkSearch which is based on VuFind 6. Some stuff will change with Vufind >= 7 which migrated from Zend2 to Laminas.
 
-### Making the code loadable by Zend2
+### Making the code loadable by Zend2/Laminas
 
-VuFind/AkSearch are written using Zend2 framework and extending/adjusting them goes down to implementation of you own Zend2 module(s).
+VuFind/AkSearch are written using the Laminas framework and extending/adjusting them goes down to implementation of you own Laminas module(s).
 
-To get your code recognized and properly loaded by a Zend2 you must:
+To get your code recognized and properly loaded by the Laminas you must:
 
 * Choose your module name (here it's `aksearchExt`).
 * Implement a `{my module name}\Module` class implementing `getAutoloaderConfig()` and `getConfig()` methods.
-    * The `getAutoloaderConfig()` should just return an empty array (as composer will deal with autoloading for us and we don't need Zend2 for that).
-    * The `getConfig()` class should return a Zend2/VuFind module configuration (an empty one is perfectly valid for starters).
-    * The minimal implementation of the `aksearchExt` module (making it Zend2-loadable but nothing more than that) would look as follows:
+    * The `getAutoloaderConfig()` should just return an empty array (as composer will deal with autoloading for us and we don't need Laminas for that).
+    * The `getConfig()` class should return a Laminas/VuFind module configuration (an empty one is perfectly valid for starters).
+    * The minimal implementation of the `aksearchExt` module (making it Laminas-loadable but nothing more than that) would look as follows:
       ```php
       class aksearchExt\Module {
           public function getAutoloaderConfig() {
@@ -56,7 +51,7 @@ This is done by adjusting the [AkSearchWeb](https://github.com/acdh-oeaw/AkSearc
 * Add your composer package to the list of composer dependencies
   either by running `composer require your-organization/your-composer-package-name` in the repository's root directory 
   or adding your package name to the `require` section of the `composer.json` manually.
-* Include your Zend2 module name in the list of modules being loaded by the VuFind/AkSearch.
+* Include your Laminas module name in the list of modules being loaded by the VuFind/AkSearch.
     * Append your module's name (namespace) at the end of the `VUFIND_LOCAL_MODULES` environment variable defined in the last line of the `Dockerfile` in the repository root directory.
     * Append your module's name (namespace) at the end of the `VUFIND_LOCAL_MODULES` environment variable in the `docker-compose.yaml` in the repository root directory
       (so people deploying with just `docker-compose up` have it as well).
@@ -84,7 +79,7 @@ To be able to live test your module:
 * Include it into the AkSearchWeb deployment as described in the *How does it work?* section above.
 * Run the aksearch-web container with:
     * Your module's code mounted under `/usr/local/vufind/vendor/{your-organization}/{your-composer-package-name}`.
-    * `APPLICATION_ENV` set to `development` (which would turn off Zend2 classmap caching and save you a lot of headache).
+    * `APPLICATION_ENV` set to `development` (which would turn off Laminas classmap caching and save you a lot of headache).
 
 ## Usingn phpstan for static code analysis
 
