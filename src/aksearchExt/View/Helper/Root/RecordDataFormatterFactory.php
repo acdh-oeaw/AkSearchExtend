@@ -53,7 +53,7 @@ class RecordDataFormatterFactory extends \AkSearch\View\Helper\Root\RecordDataFo
         $spec->setTemplateLine(
             'Statement of responsibility for the whole collection', 'getStatementOfResponsibility', 'data-statementOfResponsibility.phtml'
         );
-         
+
         // AK: Getting parent records with direct link to the parent records detail
         // page.
         $spec->setTemplateLine(
