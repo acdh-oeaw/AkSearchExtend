@@ -83,9 +83,11 @@ class Alma extends \VuFind\ILS\Driver\Alma {
             foreach ($holdings->holding ?? [] as $rawHoldingData) {
                 $holdingId                                                                    = clone $id;
                 $holdingId->holdingId                                                         = (int) $rawHoldingData->holding_id;
-                $holdingData                                                                  = new HoldingData($holdingId, (string) $rawHoldingData->$holdingsOrderBy);
-                $this->fillHoldingData($holdingData);
-                $libraries[(string) $rawHoldingData->library][(string) $holdingId->holdingId] = $holdingData;
+                if (!isset($libraries[(string) $rawHoldingData->library][$holdingId->holdingId])) {
+                    $holdingData = new HoldingData($holdingId, (string) $rawHoldingData->$holdingsOrderBy);
+                    $this->fillHoldingData($holdingData);
+                    $libraries[(string) $rawHoldingData->library][(string) $holdingId->holdingId] = $holdingData;
+                }
                 // items
                 if (empty($holdingId->mmsId)) {
                     continue;
