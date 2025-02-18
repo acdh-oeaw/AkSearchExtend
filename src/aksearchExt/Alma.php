@@ -31,18 +31,17 @@ use aksearchExt\container\HoldingData;
 use aksearchExt\container\IlsHoldingId;
 use aksearchExt\container\ItemData;
 
-
 class Alma extends \VuFind\ILS\Driver\Alma {
 
     public function hasHoldings($ids): bool {
         if (!is_array($ids)) {
             return false;
         }
-        
+
         foreach ($ids as $id) {
             try {
                 $holdings = $this->makeRequest('/bibs/' . rawurldecode($id->mmsId) . '/holdings');
-                if (count($holdings->holding ?? []) > 0){
+                if (count($holdings->holding ?? []) > 0) {
                     return true;
                 }
             } catch (\VuFind\Exception\ILS $e) {
@@ -84,13 +83,11 @@ class Alma extends \VuFind\ILS\Driver\Alma {
                 }
             }
             foreach ($holdings->holding ?? [] as $rawHoldingData) {
-                $holdingId                                   = clone $id;
-                $holdingId->holdingId                        = (string) $rawHoldingData->holding_id;
-                if (!isset($libraries[(string) $rawHoldingData->library][$holdingId->holdingId])) {
-                    $holdingData                                 = new HoldingData($holdingId, (string) $rawHoldingData->$holdingsOrderBy);
-                    $this->fillHoldingData($holdingData);
-                    $libraries[(string) $rawHoldingData->library][$holdingId->holdingId] = $holdingData;
-                }
+                $holdingId                                                           = clone $id;
+                $holdingId->holdingId                                                = (string) $rawHoldingData->holding_id;
+                $holdingData                                                         = new HoldingData($holdingId, (string) $rawHoldingData->$holdingsOrderBy);
+                $this->fillHoldingData($holdingData);
+                $libraries[(string) $rawHoldingData->library][$holdingId->holdingId] = $holdingData;
                 // items
                 if (empty($holdingId->mmsId)) {
                     continue;
@@ -99,8 +96,8 @@ class Alma extends \VuFind\ILS\Driver\Alma {
                 $orderBy   = $this->config['Holdings']['itemsOrderBy'] ?? 'description,enum_a,enum_b';
                 $direction = $this->config['Holdings']['itemsOrderByDirection'] ?? 'desc';
                 $apiCall   = "/bibs/$holdingId->mmsId/holdings/$holdingId->holdingId/items?" .
-                             "order_by=$orderBy&direction=$direction" .
-                             "&expand=due_date&limit=10000";
+                    "order_by=$orderBy&direction=$direction" .
+                    "&expand=due_date&limit=10000";
                 // ALMA items API is terribly broken
                 // Not only it applies ordering after paging (sic!)
                 // but also has some issues with applying the offset when no ordering is specified
@@ -111,7 +108,7 @@ class Alma extends \VuFind\ILS\Driver\Alma {
                     foreach ($response->item as $i) {
                         $holdingData = $libraries[(string) $i->item_data->library][(string) $i->holding_data->holding_id];
                         // filter LKR resources
-                        $itemValues = [
+                        $itemValues  = [
                             (string) $i->item_data->barcode,
                             (string) $i->item_data->enumeration_a,
                             (string) $i->item_data->enumeration_b,
@@ -130,7 +127,7 @@ class Alma extends \VuFind\ILS\Driver\Alma {
                 }
             }
         }
-               
+
         $libsOrder = explode("\n", file_get_contents(__DIR__ . '/libsOrder.txt'));
         $libsOrder = array_combine($libsOrder, range(0, count($libsOrder) - 1));
         uksort($libraries, fn($a, $b) => ($libsOrder[$a] ?? 9999) <=> ($libsOrder[$b] ?? 9999));
@@ -147,7 +144,7 @@ class Alma extends \VuFind\ILS\Driver\Alma {
                     continue;
                 }
                 $results['holdings'][] = $j;
-                $results['total'] += max(count($j->items), count($j->lkrItems), 1);
+                $results['total']      += max(count($j->items), count($j->lkrItems), 1);
             }
         }
 
@@ -215,35 +212,33 @@ class Alma extends \VuFind\ILS\Driver\Alma {
                 return $this->dateConverter->convertToDisplayDate(
                         'Y-m-d',
                         substr($date, 0, 10)
-                );
+                    );
             }
         } elseif (preg_match($timestampMs, $date) === 1) {
             if ($withTime) {
                 return $this->dateConverter->convertToDisplayDateAndTime(
                         'Y-m-d\TH:i:s#???T',
                         $date
-                );
+                    );
             } else {
                 return $this->dateConverter->convertToDisplayDate(
                         'Y-m-d',
                         substr($date, 0, 10)
-                );
+                    );
             }
         } else {
             throw new \Exception("Invalid date: $date");
         }
     }
-    
-    
+
     /**
      * We have to override the base method to fetch the values from our ALMA config.
      * 
      * https://redmine.acdh.oeaw.ac.at/issues/21372
      * @param type $patron
      * @return type
-     */    
-    public function getPickupLocations($patron)
-    {
+     */
+    public function getPickupLocations($patron) {
         // Variable for returning
         $filteredPul = null;
 
@@ -258,7 +253,7 @@ class Alma extends \VuFind\ILS\Driver\Alma {
 
             // Filter valid pickup locations
             $filteredPul = array_filter($pul,
-                function($p) use ($validPul) {
+                                        function ($p) use ($validPul) {
                     return in_array($p['locationID'], $validPul);
                 }
             );
@@ -268,4 +263,3 @@ class Alma extends \VuFind\ILS\Driver\Alma {
         return ($filteredPul) ? array_values($filteredPul) : $pul;
     }
 }
-

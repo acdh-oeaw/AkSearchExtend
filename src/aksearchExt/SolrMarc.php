@@ -187,14 +187,20 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 $param = new ParamBag(['fl' => 'id']);
                 $record = $this->searchService->search('Solr', new Query("ctrlnum:$ctrlnum"), 0, 1, $param)->first();
                 if ($record !== null) {
-                    // there might be many subfield g values (!)
-                    // for now we optimistically assume the prefix (which we skip using preg_replace())
-                    // doesn't count
-                    $ids[] = new IlsHoldingId($record->getRawData()['id'], null, preg_replace('/^.*:/', '', $lkrRecord->g), true);
+                    // There might be many subfield g values (!)
+                    // For now we optimistically assume the prefix (which we skip using preg_replace()) doesn't count
+                    // There can be multiple LKR records per single holding - collect them in one entry (#24391)
+                    $rawId = $record->getRawData()['id'];
+                    $itemFilter = preg_replace('/^.*:/', '', $lkrRecord->g);
+                    if (!isset($ids[$rawId])) {
+                        $ids[$rawId] = new IlsHoldingId($rawId, null, $itemFilter, true);
+                    } else {
+                        $ids[$rawId]->itemFilter = array_merge($ids[$rawId]->itemFilter, $itemFilter);
+                    }
                 }
             }
         }
-        return $ids;
+        return array_values($ids);
     }
 
     /**
