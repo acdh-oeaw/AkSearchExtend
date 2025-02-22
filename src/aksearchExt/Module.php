@@ -74,6 +74,11 @@ class Module {
                             'holdingsils'       => 'aksearchExt\RecordTab\HoldingsILS',
                         ]
                     ],
+                    'search_backend' => [
+                      'factories' => [
+                            'Solr' => 'aksearchExt\Search\SolrDefaultBackendFactory',
+                        ]
+                    ],
                 ],
             ],
         ];
