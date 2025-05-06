@@ -1077,7 +1077,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         return $str;
     }
 
-    private function checkVariable(string | null $var): bool {
+    private function checkVariable(string | array | null $var): bool {
         if (isset($var) && !empty($var)) {
             return true;
         }
