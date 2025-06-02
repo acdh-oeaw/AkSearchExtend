@@ -619,6 +619,11 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     }
 
     /**
+     * https://redmine.acdh.oeaw.ac.at/issues/25237
+     */
+    const DEFAULT_AUTHOR_ROLE = 'Participant';
+
+    /**
      * https://redmine.acdh.oeaw.ac.at/issues/19499
      */
     private function mergeAuthorsAndRoles(array $names, array $roles,
@@ -632,14 +637,19 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             if (count($authors) > 0) {
                 foreach ($authors as $ak => $av) {
                     if ($av['name'] == $value1) {
-                        $authors[$ak]['role'][] = $roles[$key1];
+                        $authors[$ak]['role'][] = $roles[$key1] ?? self::DEFAULT_AUTHOR_ROLE;
                     } else {
-                        $authors[$key1] = ["name" => $owStr . $value1, "role" => [
-                                $roles[$key1]]];
+                        $authors[$key1] = [
+                            "name" => $owStr . $value1,
+                            "role" => [$roles[$key1] ?? self::DEFAULT_AUTHOR_ROLE]
+                        ];
                     }
                 }
             } else {
-                $authors[$key1] = ["name" => $owStr . $value1, "role" => [$roles[$key1]]];
+                $authors[$key1] = [
+                    "name" => $owStr . $value1,
+                    "role" => [$roles[$key1] ?? self::DEFAULT_AUTHOR_ROLE]
+                ];
             }
         }
         return $this->mergeRolesForSearchView($authors);
