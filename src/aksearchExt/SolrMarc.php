@@ -417,7 +417,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         // Get primary author
         $primaryName = $this->fields['author'] ?? null;
-        $primaryRole = $this->fields['author_role'] ?? null;
+        $primaryRole = $this->fields['author_role'] ?? [];
         $primaryAuth = $this->fields['author_GndNo_str'] ?? null;
 
         $authors = array();
@@ -427,12 +427,12 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         // Get primary corporate author
         $corpName = $this->fields['author_corporate'][0] ?? null;
-        $corpRole = $this->fields['author_corporate_role'][0] ?? null;
+        $corpRole = $this->fields['author_corporate_role'][0] ?? [];
         $corpAuth = $this->fields['author_corporate_GndNo_str'] ?? null;
 
         // Get primary meeting author
         $meetingName = $this->fields['author_meeting_txt'] ?? null;
-        $meetingRole = $this->fields['author_meeting_role_str'] ?? null;
+        $meetingRole = $this->fields['author_meeting_role_str'] ?? [];
         $meetingAuth = $this->fields['author_meeting_GndNo_str'] ?? null;
 
         // Get secondary authors
