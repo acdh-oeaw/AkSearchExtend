@@ -15,6 +15,7 @@ Can also serve as an example of extending VuFind with your own module being load
     `{FuVindDir}/module/VuFindSearch/src/VuFindSearch/Backend/Solr/LuceneSyntaxHelper.php`
     by the [Dockerfile](https://github.com/acdh-oeaw/AkSearchWeb/blob/main/Dockerfile) creating the deployment docker image 
     (which is admitedly very ugly but avoids overriding of the whole VuFind/AkSearch Solr search backend classes stack).
+* Tuned version of the `VuFind\Service\HttpServiceFactory` which is capable of initializing no proxy hosts regex.
 
 The detailed description of particular features is included in the `docs` folder.
 
