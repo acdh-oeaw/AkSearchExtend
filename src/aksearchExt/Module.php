@@ -37,6 +37,7 @@ class Module {
             'service_manager' => [
                 'factories' => [
                     'aksearchExt\ILSHoldLogic' => 'VuFind\ILS\Logic\LogicFactory',
+                    'VuFindHttp\HttpService' => 'aksearchExt\HttpServiceFactory',
                 ],
             ],
             'vufind'          => [
