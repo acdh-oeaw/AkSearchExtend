@@ -27,6 +27,7 @@
 namespace aksearchExt;
 
 use Interop\Container\ContainerInterface;
+use Laminas\ServiceManager\Factory\FactoryInterface;
 
 /**
  * Description of VuFindHttp\HttpService
