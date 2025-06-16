@@ -34,7 +34,7 @@ use Laminas\ServiceManager\Factory\FactoryInterface;
  *
  * @author zozlak
  */
-class HttpServiceFactory implements \VuFind\Service\FactoryInterface {
+class HttpServiceFactory implements FactoryInterface {
     /**
      * Create an object
      *
