@@ -722,7 +722,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * 
      * Add the subfield 0 and remove the , from the subfield join
      * @param type $extended
-     * @return type
+     * @return array
      */
     public function getAllSubjectHeadings($extended = false) {
 
@@ -735,12 +735,12 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             $ind2 = $subjectField->getIndicator(2);
 
             if (is_numeric($ind1) && is_numeric($ind2)) {
-                $subfields = $subjectField->getSubfields('[axvtyzbcgh0]', true);
+                $subfields = $subjectField->getSubfields('[axvtyzbcgh02]', true);
                 $subfieldData = [];
                 foreach ($subfields as $subfield) {
                     $subfieldData[] = $subfield->getData();
                 }
-                $returnValue[$ind1][$ind2] = (join(' ', $subfieldData));
+                $returnValue[$ind1][$ind2] = $subfieldData;
             }
         }
 
@@ -770,7 +770,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $returnValue = array_map(
                 'unserialize', array_unique(array_map('serialize', $returnValue))
         );
-        return $this->stripNonSortingChars($returnValue);
+        return $returnValue;
     }
 
     /**
