@@ -713,6 +713,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * https://redmine.acdh.oeaw.ac.at/issues/20271
      * 
      * Add the subfield 0 and remove the , from the subfield join
+     * @param type $extended
+     * @return array
      */
     public function getAllSubjectHeadings(mixed $extended = false): array {
         $returnValue   = [];
@@ -730,11 +732,11 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 $subfieldData = [];
                 foreach ($subfields as $subfield) {
                     if (in_array($subfield['code'], ['a', 'x', 'v', 't', 'y', 'z',
-                            'b', 'c', 'g', 'h', '0'])) {
+                            'b', 'c', 'g', 'h', '0', '2'])) {
                         $subfieldData[] = $subfield['data'];
                     }
                 }
-                $returnValue[$ind1][$ind2] = (join(' ', $subfieldData));
+                $returnValue[$ind1][$ind2] = $subfieldData;
             }
         }
 
@@ -763,8 +765,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $returnValue = array_map(
             'unserialize', array_unique(array_map('serialize', $returnValue))
         );
-
-        return $this->stripNonSortingChars($returnValue);
+        return $returnValue;
     }
 
     /**
