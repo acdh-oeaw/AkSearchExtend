@@ -136,6 +136,18 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     }
 
     /**
+     * Return MARC or ISIL Code of org governing the identifier in field 001 from field 003
+     * @return string
+     */
+    public function getOwningInstitution(): string {
+        $oi = $this->getMarcRecord()->getField('003')->getData();
+        if (isset($oi) ) {
+            return $oi;
+        }
+        return "none";
+    }
+
+    /**
      * https://redmine.acdh.oeaw.ac.at/issues/20340
      */
     public function isPeerReviewed(): bool {
