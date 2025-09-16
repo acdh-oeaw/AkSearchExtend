@@ -136,8 +136,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @return string
      */
     public function getOwningInstitution(): string {
-        $oi = $this->getMarcRecord()->getField('003')->getData();
-        if (isset($oi) ) {
+        if ($this->getMarcRecord()->getField('003')) {
+            $oi = $this->getMarcRecord()->getField('003')->getData();
             return $oi;
         }
         return "none";
