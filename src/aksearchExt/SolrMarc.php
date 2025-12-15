@@ -309,7 +309,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * Display Exemplarbeschreibung and Ex Libris data on the holdings tab
      * https://redmine.acdh.oeaw.ac.at/issues/19506
      */
-    public function getHolding991992() {
+    public function getHolding991992(): array
+    {
         $id = $this->getUniqueID();
         $marc = $this->getMarcRecord();
         // get holdings because we have to use the holdings result array to display the data inside the tab
@@ -321,7 +322,6 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     }
 
     private function formatHolding991992Data(array $data): array {
-
         $exemplerdata = array();
         foreach ($data as $name => $holding) {
             if (isset($holding->items)) {
@@ -344,7 +344,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * https://redmine.acdh.oeaw.ac.at/issues/19506
      * Display Exemplarbeschreibung and Ex Libris data on the holdinstab
      * @param type $marc
-     * @param type $data
+     * @param array $data
      */
     private function getHolding991992Data($marc, array &$data) {
         //Exemplarbeschreibung
@@ -428,7 +428,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      *
      * @return array    An array with all contributors grouped by role
      */
-    public function getContributorsByRole() {
+    public function getContributorsByRole(): array
+    {
         // Initialize return variable
         $contributors = [];
 
@@ -514,9 +515,9 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/19490#7xx-700-710-711
-     * We have to create the name_extemd key because first we need to filter out
+     * We have to create the name_extend key because first we need to filter out
      * the duplications. and if it is filtered then we simply copy the extended value
-     * into the name, and then we dont have to extend the gui in all templates to apply
+     * into the name, and then we don't have to extend the gui in all templates to apply
      * the 700 rules for the name display.
      * @param array $contributors
      */
@@ -588,11 +589,12 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
     /**
      * Create the MARC 700 field authors for the gui core-phtml
-     * @param type $names
-     * @param type $roles
+     * @param array $names
+     * @param array $roles
+     * @param array $ow
      * @return array
      */
-    private function createSecondaryAuthors($names, $roles, $ow = []): array {
+    private function createSecondaryAuthors(array $names, array $roles, array $ow = []): array {
         $authors2 = array();
         foreach ($names as $key1 => $value1) {
             // store IP
@@ -643,11 +645,12 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/19499
-     * @param type $names
-     * @param type $roles
+     * @param array $names
+     * @param array $roles
+     * @param array $ow
      * @return array
      */
-    private function mergeAuthorsAndRoles($names, $roles, $ow = array()): array {
+    private function mergeAuthorsAndRoles(array $names, array $roles, $ow = array()): array {
         $authors = array();
         foreach ($names as $key1 => $value1) {
             $owStr = "";
@@ -672,11 +675,10 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/19499
-     * @param type $names
-     * @param type $roles
+     * @param array $authors
      * @return array
      */
-    private function mergeRolesForSearchView(array $authors) {
+    private function mergeRolesForSearchView(array $authors): array {
         $result = [];
         foreach ($authors as $k => $v) {
             $result[$k] = $v['name'] . ' [ ' . implode(", ", $v["role"]) . ' ]';
@@ -736,7 +738,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @param type $extended
      * @return array
      */
-    public function getAllSubjectHeadings($extended = false) {
+    public function getAllSubjectHeadings($extended = false): array {
 
         $returnValue = [];
         $subjectFields = $this->getMarcRecord()->getFields('689');
@@ -791,7 +793,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * Get the record view subtitle
      * @return string
      */
-    public function getSubTitle() {
+    public function getSubTitle(): string {
         $marc = $this->getMarcRecord();
         $st = $this->getMarcFieldsAsObject($marc, 249, null, null, null);
         $str = "";
@@ -846,9 +848,9 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * https://redmine.acdh.oeaw.ac.at/issues/19917
      * 
      * Get the Record view title
-     * @return type
+     * @return string
      */
-    public function getWholeTitle() {
+    public function getWholeTitle(): string {
         $field245C = $this->getMarcFieldsAsObject($this->getMarcRecord(), 245, null, null, [
             'c']);
         if (isset($field245C[0]->c)) {
@@ -874,7 +876,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      *
      * @return string
      */
-    public function getTitle() {
+    public function getTitle(): string {
 
         $matches = $this->getFieldArray('245', ['a', 'b'], true, ' : ');
         $title880 = $this->getTitle880();        
