@@ -185,7 +185,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * Collects all possible holding identifiers, including information required
      * for LKR items filtering.
      * 
-     * @return array<\aksearchExt\container\IlsHoldingId>
+     * @return array<IlsHoldingId>
      */
     public function getHoldingIds(): array {
         static $ids = [];
@@ -933,6 +933,22 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             $arr['container_title']     = $this->removeBracketsFromText($this->fields['container_title']);
         } else if (isset($this->fields['container_title'])) {
             $arr['container_title'] = $this->removeBracketsFromText($this->fields['container_title']);
+        }
+        return $arr;
+    }
+
+    /**
+     * fetch related documents from field 787
+     * @return array
+     */
+    public function getRelatedDocument(): array {
+        $rd = $this->getMarcFieldsAsObject($this->getMarcRecord(), "787", "0", null, [
+            'i','t','w']);
+        $arr = [];
+        foreach ($rd as $d) {
+            if (isset($d->w) && preg_match("/^\(AT-OBV\)AC.*/", $d->w)) {
+                array_push($arr, $d);
+            }
         }
         return $arr;
     }
