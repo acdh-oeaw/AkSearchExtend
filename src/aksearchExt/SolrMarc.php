@@ -182,7 +182,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * Collects all possible holding identifiers, including information required
      * for LKR items filtering.
      * 
-     * @return array<\aksearchExt\container\IlsHoldingId>
+     * @return array<IlsHoldingId>
      */
     public function getHoldingIds(): array {
         static $ids = [];
@@ -946,10 +946,9 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     /**
      * https://redmine.acdh.oeaw.ac.at/issues/19487
      * fetch solr container_reference and container_title
-     * we need the baseurl also, but thats available only in the templates
      * @return array
      */
-    public function getSuperiorDocument($baseUrl = ""): array {
+    public function getSuperiorDocument(): array {
         $arr = [];
         if(isset($this->fields['container_reference']) && isset($this->fields['container_title'])) {
             $arr['container_reference'] = $this->fields['container_reference'];
@@ -960,7 +959,22 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         }        
         return $arr;
     }
-    
+
+    /**
+     * fetch related documents from field 787
+     * @return array
+     */
+    public function getRelatedDocument(): array {
+        $rd = $this->getMarcFieldsAsObject($this->getMarcRecord(), "787", "0", null, [
+            'i','t','w']);
+        $arr = [];
+        foreach ($rd as $d) {
+            if (isset($d->w) && preg_match("/^\(AT-OBV\)AC.*/", $d->w)) {
+                array_push($arr, $d);
+            }
+        }
+        return $arr;
+    }
 
     /**
      * Get publication details from 264 fields. This function take several variants

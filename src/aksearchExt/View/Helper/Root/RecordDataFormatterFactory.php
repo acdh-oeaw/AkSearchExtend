@@ -45,6 +45,10 @@ class RecordDataFormatterFactory extends \AkSearch\View\Helper\Root\RecordDataFo
         $spec->setTemplateLine(
             'Superior document', 'getSuperiorDocument', 'data-superiorDocument.phtml'
         );
+
+        $spec->setTemplateLine(
+            'Related document', 'getRelatedDocument', 'data-relatedDocument.phtml'
+        );
         
         $spec->setTemplateLine(
             'Title supplement to the whole collection', 'getTitleAddition', 'data-titleAddition.phtml'
