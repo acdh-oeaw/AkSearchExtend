@@ -186,9 +186,9 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      */
     public function getHoldingIds(): array {
         static $ids = [];
-        if (count($ids) === 0) {
-            $ids[] = new IlsHoldingId($this->getUniqueID());
-
+        $uniqueId = $this->getUniqueID();
+        if (count($ids) === 0 && is_int($uniqueId)) {
+            $ids[] = new IlsHoldingId($uniqueId);
             $marc = $this->getMarcRecord();
             $lkrRecords = $this->getMarcFieldsAsObject($marc, 773, 1, 8, ['w']);
             foreach ($lkrRecords as $lkrRecord) {
