@@ -444,7 +444,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $primaryAuth = $this->fields['author_GndNo_str'] ?? null;
 
         $authors = array();
-        if ($primaryName !== null) {
+        if ($primaryName !== null && $primaryRole !== null) {
             $authors = $this->createSecondaryAuthors($primaryName, $primaryRole);
         }
 
@@ -657,17 +657,21 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             if(isset($ow[$key1]) && !empty($ow[$key1]) && $ow[$key1] !== 'noLinkedField') {
                 $owStr = $ow[$key1]. ' / ';
             }
+            $role = $roles[$key1] ?? '';
             if (count($authors) > 0) {
                 foreach ($authors as $ak => $av) {
                     if ($av['name'] == $value1) {
-                        $authors[$ak]['role'][] = $roles[$key1];
+                        if ($role !== '') {
+                            $authors[$ak]['role'][] = $role;
+                        }
                     } else {
-                        $authors[$key1] = array("name" => $owStr.$value1, "role" => array(
-                                $roles[$key1]));
+                        $authors[$key1] = array("name" => $owStr.$value1, "role" =>
+                            $role !== '' ? array($role) : array());
                     }
                 }
             } else {
-                $authors[$key1] = array("name" => $owStr.$value1, "role" => array($roles[$key1]));
+                $authors[$key1] = array("name" => $owStr.$value1, "role" =>
+                    $role !== '' ? array($role) : array());
             }
         }
         return $this->mergeRolesForSearchView($authors);
@@ -681,7 +685,9 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     private function mergeRolesForSearchView(array $authors): array {
         $result = [];
         foreach ($authors as $k => $v) {
-            $result[$k] = $v['name'] . ' [ ' . implode(", ", $v["role"]) . ' ]';
+            $roles = array_filter($v['role'] ?? []);
+            $result[$k] = $v['name']
+                . ($roles ? ' [ ' . implode(", ", $roles) . ' ]' : '');
         }
         return $result;
     }
