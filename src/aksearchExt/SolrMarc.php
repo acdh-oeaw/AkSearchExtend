@@ -779,7 +779,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                         $subfieldContent = $subfield->getData();
                         $tokens = preg_split("/\s+[\/-]\s+/", $subfieldContent);
                         foreach ($tokens as $token) {
-                            $returnValue[$fieldCount][$tokenCount] = $token;
+                            $returnValue[$fieldCount][$tokenCount] = [$token];
                             $tokenCount++;
                         }
                     }
