@@ -136,6 +136,57 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     }
 
     /**
+     * Return alternative titles, appending linked original-script 880$t values
+     * to titles sourced from 505$t.
+     *
+     * @return array|null
+     */
+    public function getTitleAlt() {
+        $titles = parent::getTitleAlt();
+        if (!is_array($titles) || count($titles) === 0) {
+            return $titles;
+        }
+
+        $marc     = $this->getMarcRecord();
+        $fields505 = $this->getMarcFieldsAsObject($marc, '505', null, null, ['6', 't']);
+        $fields880 = $this->getMarcFieldsAsObject($marc, '880', null, null, ['6', 't']);
+        $field880Helper = new Field880Helper($fields880);
+        $matchedTitles = [];
+
+        foreach ($fields505 as $field505) {
+            if (!isset($field505->t, $field505->{6})) {
+                continue;
+            }
+
+            $mainTitles = is_array($field505->t) ? $field505->t : [$field505->t];
+            $linkages   = is_array($field505->{6}) ? $field505->{6} : [$field505->{6}];
+            $originalTitles = [];
+            foreach ($linkages as $linkage) {
+                $originalTitles = array_merge(
+                    $originalTitles,
+                    $field880Helper->getLinkedSubfieldValues('505', $linkage, ['t'])
+                );
+            }
+            $originalTitles = array_values(array_unique($originalTitles));
+            if (count($originalTitles) === 0) {
+                continue;
+            }
+
+            foreach ($mainTitles as $mainTitle) {
+                foreach ($titles as $index => $title) {
+                    if (!isset($matchedTitles[$index]) && $title === $mainTitle) {
+                        $titles[$index] .= ' (' . implode('; ', $originalTitles) . ')';
+                        $matchedTitles[$index] = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return $titles;
+    }
+
+    /**
      * Return MARC or ISIL Code of org governing the identifier in field 001 from field 003
      * @return string
      */
