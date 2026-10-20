@@ -305,12 +305,21 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     private function mergeElectronicHoldingsExtraData(array &$results) {        
        //portfolio fields
         $pE = ['avek', 'aveA', 'aveB', 'aveC', 'aveD', 'aveE', 'aveF', 'aveG', 'aveH', 'aveI', 'aveJ', 'aveK', 'aveL'];
+
+        // Some records have no additional AVE holdings (and some have no
+        // electronic holdings at all), so there is nothing to merge.
+        if (empty($results['electronic_holdings']) || empty($results['electronic_holdings_extra'])) {
+            return;
+        }
         
         foreach($results['electronic_holdings'] as $k => $v) {
             foreach($results['electronic_holdings'][$k]->items as $ik => $iv ) {
                 if(count($results['electronic_holdings_extra']) > 0 ) {
                     foreach($results['electronic_holdings_extra'] as $ek => $ev) {
                         if(isset($ev[$k]->items[$ik]) && $ev[$k]->items[$ik]->mmsId === $k) {
+                            if (!isset($results['electronic_holdings'][$k]->items[$ik]->portfolios[$ek])) {
+                                $results['electronic_holdings'][$k]->items[$ik]->portfolios[$ek] = new \stdClass();
+                            }
                             foreach($pE as $p) {
                                 (empty($results['electronic_holdings'][$k]->items[$ik]->portfolios[$ek]->{$p})) ? $results['electronic_holdings'][$k]->items[$ik]->portfolios[$ek]->{$p} = $ev[$k]->items[$ik]->portfolio->{$p} :  "";
                             }
@@ -674,6 +683,13 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $primCorpRole = (array) ($this->fields['author_corporate_role'] ?? []);
         $primCorp = (array) ($this->fields['author_corporate'] ?? []);
         $primMeet = (array) ($this->fields['author_meeting_txt'] ?? []);
+        $primMeetRole = (array) ($this->fields['author_meeting_role_str'] ?? []);
+
+        // MARC 1XX $4 remains the indexed role code (used for facets and
+        // searches); use the human-readable $e for display when present.
+        $primRole = $this->getPrimaryDisplayRoles('100', $primRole);
+        $primCorpRole = $this->getPrimaryDisplayRoles('110', $primCorpRole);
+        $primMeetRole = $this->getPrimaryDisplayRoles('111', $primMeetRole);
         // Secondary authors
         $secPers = (array) ($this->fields['author2'] ?? []);
         $secOW = (array) ($this->fields['author2_original_writing_str_mv'] ??  []);
@@ -683,15 +699,36 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         $authorsCorp = $this->mergeAuthorsAndRoles($primCorp, $primCorpRole);
         $authors = $this->mergeAuthorsAndRoles($primPers, $primRole);
+        $meetings = $this->mergeAuthorsAndRoles($primMeet, $primMeetRole);
         $authors2 = $this->mergeAuthorsAndRoles($secPers, $secRole, $secOW);
         // Merge array
-        $merged = array_merge($authors, $authorsCorp, $primMeet, $authors2, $secCorp, $secMeet);
+        $merged = array_merge($authors, $authorsCorp, $meetings, $authors2, $secCorp, $secMeet);
         $mergedWithOutRole = array_merge($primPers, $primCorp, $primMeet, $secPers, $secCorp, $secMeet);
 
         //we have to pass two arrays, one if for the display text with the authors and roles
         //the second is for the search url, because if we add the roles also, then the search will fails
         // Return merged array
         return array('text' => $merged, 'url' => $mergedWithOutRole);
+    }
+
+    /**
+     * Prefer MARC 1XX $e terms for display, falling back to the indexed $4 role.
+     * The indexed role fields themselves are not modified.
+     *
+     * @param string $tag MARC field tag
+     * @param array $fallbackRoles Indexed role codes
+     *
+     * @return array
+     */
+    private function getPrimaryDisplayRoles(string $tag, array $fallbackRoles): array
+    {
+        $roles = [];
+        foreach ($this->getMarcRecord()->getFields($tag) as $index => $field) {
+            $role = $field->getSubfield('e');
+            $roles[$index] = is_object($role) && trim($role->getData()) !== ''
+                ? $role->getData() : ($fallbackRoles[$index] ?? '');
+        }
+        return $roles ?: $fallbackRoles;
     }
 
     /**
