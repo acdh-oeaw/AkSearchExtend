@@ -47,6 +47,13 @@ class HoldingData {
     public ?IlsHoldingId $id                = null;
 
     /**
+     * Related people and organizations from holding field 695.
+     *
+     * @var array<array{indicator: string, subfields: array<array{code: string, value: string}>}>
+     */
+    public array $relatedAgents = [];
+
+    /**
      * 
      * @var array<ItemData>
      */
@@ -74,6 +81,20 @@ class HoldingData {
                     $this->locationCode    = $subfields->c ?? '';
                     $this->callNos         = $subfields->h ?? '';
                     $this->callNumberNotes = $subfields->z ?? '';
+                } elseif ($attr['tag'] == '695') {
+                    $agent = [
+                        'indicator' => (string) $attr['ind1'],
+                        'subfields' => [],
+                    ];
+                    foreach ($field->subfield as $subfield) {
+                        $agent['subfields'][] = [
+                            'code'  => (string) $subfield->attributes()['code'],
+                            'value' => (string) $subfield,
+                        ];
+                    }
+                    if (count($agent['subfields']) > 0) {
+                        $this->relatedAgents[] = $agent;
+                    }
                 } elseif ($tag === '866_30') {
                     $subfields               = $this->extractMarcSubfields($field);
                     $this->holdingsAvailable = $subfields->a ?? '';
