@@ -491,7 +491,12 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         // Get primary corporate author
         $corpName = $this->fields['author_corporate'][0] ?? null;
-        $corpRole = $this->fields['author_corporate_role'][0] ?? [];
+        $corpRole = $this->fields['author_corporate_role'][0] ?? null;
+        // The role field is not populated for every MARC 110 import. Fall back
+        // to the source record so the $4 value is still available for display.
+        if ($corpRole === null) {
+            $corpRole = $this->getPrimaryDisplayRoles('110', [])[0] ?? null;
+        }
         $corpAuth = $this->fields['author_corporate_GndNo_str'] ?? null;
 
         // Get primary meeting author
@@ -683,8 +688,35 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     }
 
     /**
-     * https://redmine.acdh.oeaw.ac.at/issues/25237
+     * Display the MARC 1XX $4 role code and, when available, the readable $e
+     * term. Fall back to the indexed role when the source $4 is absent.
+     *
+     * @param string $tag MARC field tag
+     * @param array $fallbackRoles Indexed role codes
+     *
+     * @return array
      */
+    private function getPrimaryDisplayRoles(string $tag, array $fallbackRoles): array
+    {
+        $roles = [];
+        foreach ($this->getMarcRecord()->getFields($tag) as $index => $field) {
+            $roleCode = $field->getSubfield('4');
+            $roleTerm = $field->getSubfield('e');
+            $roleCode = is_object($roleCode) ? trim($roleCode->getData()) : '';
+            $roleTerm = is_object($roleTerm) ? trim($roleTerm->getData()) : '';
+            $indexedRole = $fallbackRoles[$index] ?? '';
+
+            if ($roleCode !== '' && $roleTerm !== '') {
+                $roles[$index] = $roleCode . ' (' . $roleTerm . ')';
+            } else {
+                $roles[$index] = $roleCode !== '' ? $roleCode
+                    : ($roleTerm !== '' ? $roleTerm : $indexedRole);
+            }
+        }
+        return $roles ?: $fallbackRoles;
+    }
+
+    /** https://redmine.acdh.oeaw.ac.at/issues/25237 */
     const DEFAULT_AUTHOR_ROLE = 'Participant';
 
     /**
