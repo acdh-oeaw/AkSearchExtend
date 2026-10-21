@@ -305,6 +305,9 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * https://redmine.acdh.oeaw.ac.at/issues/20327
      */
     private function mergeElectronicHoldingsExtraData(array &$results): void {
+        if (empty($results['electronic_holdings']) || empty($results['electronic_holdings_extra'])) {
+            return;
+        }
         $extra = $results['electronic_holdings_extra'] ?? [];
         foreach ($results['electronic_holdings'] as $k => $v) {
             foreach ($v->items as $ik => $iv) {
