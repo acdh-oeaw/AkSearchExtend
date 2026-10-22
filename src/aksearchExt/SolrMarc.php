@@ -147,9 +147,8 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
             return $titles;
         }
 
-        $marc     = $this->getMarcRecord();
-        $fields505 = $this->getMarcFieldsAsObject($marc, '505', null, null, ['6', 't']);
-        $fields880 = $this->getMarcFieldsAsObject($marc, '880', null, null, ['6', 't']);
+        $fields505 = $this->getMarcFieldsAsObject('505', null, null, ['6', 't']);
+        $fields880 = $this->getMarcFieldsAsObject('880', null, null, ['6', 't']);
         $field880Helper = new Field880Helper($fields880);
         $matchedTitles = [];
 
@@ -191,11 +190,9 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @return string
      */
     public function getOwningInstitution(): string {
-        if ($this->getMarcRecord()->getField('003')) {
-            $oi = $this->getMarcRecord()->getField('003')->getData();
-            return $oi;
-        }
-        return "none";
+        $owningInstitution = $this->getMarcReader()->getField('003');
+        return is_string($owningInstitution) && $owningInstitution !== ''
+            ? $owningInstitution : 'none';
     }
 
     /**
@@ -243,8 +240,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $uniqueId = $this->getUniqueID();
         if (count($ids) === 0 && $uniqueId !== '') {
             $ids[] = new IlsHoldingId($uniqueId);
-            $marc = $this->getMarcRecord();
-            $lkrRecords = $this->getMarcFieldsAsObject($marc, 773, 1, 8, ['w']);
+            $lkrRecords = $this->getMarcFieldsAsObject('773', 1, 8, ['w', 'g']);
             foreach ($lkrRecords as $lkrRecord) {
                 if (empty($lkrRecord->w) || empty($lkrRecord->g)) {
                     continue;
@@ -445,7 +441,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $marc   = $this->getMarcReader();
         $fields = [];
         foreach ($marc->getFields(sprintf('%03d', $field)) as $i) {
-            if (is_array($i) && (!empty($ind1) && intval($i['i1']) !== $ind1 || !empty($ind2) && intval($i['i2']) !== $ind2)) {
+            if (is_array($i) && ($ind1 !== null && intval($i['i1']) !== $ind1 || $ind2 !== null && intval($i['i2']) !== $ind2)) {
                 continue;
             }
             $fieldData = [];
@@ -702,11 +698,10 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     private function getPrimaryDisplayRoles(string $tag, array $fallbackRoles): array
     {
         $roles = [];
-        foreach ($this->getMarcRecord()->getFields($tag) as $index => $field) {
-            $roleCode = $field->getSubfield('4');
-            $roleTerm = $field->getSubfield('e');
-            $roleCode = is_object($roleCode) ? trim($roleCode->getData()) : '';
-            $roleTerm = is_object($roleTerm) ? trim($roleTerm->getData()) : '';
+        $marcReader = $this->getMarcReader();
+        foreach ($marcReader->getFields($tag) as $index => $field) {
+            $roleCode = trim($marcReader->getSubfield($field, '4'));
+            $roleTerm = trim($marcReader->getSubfield($field, 'e'));
             $indexedRole = $fallbackRoles[$index] ?? '';
 
             if ($roleCode !== '' && $roleTerm !== '') {
@@ -1029,8 +1024,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @return array
      */
     public function getRelatedDocument(): array {
-        $rd = $this->getMarcFieldsAsObject($this->getMarcRecord(), "787", "0", null, [
-            'i','t','w']);
+        $rd = $this->getMarcFieldsAsObject('787', 0, null, ['i', 't', 'w']);
         $arr = [];
         foreach ($rd as $d) {
             if (isset($d->w) && preg_match("/^\(AT-OBV\)AC.*/", $d->w)) {
