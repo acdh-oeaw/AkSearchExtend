@@ -39,6 +39,8 @@ use aksearchExt\AcdhChHelper\Field880Helper;
 
 class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
+    private ?array $holdingIds = null;
+
     static private $acIdCallers = [
         RecordLinker::class . '::getChildRecordSearchUrl',
         ComponentParts::class . '::getResults',
@@ -63,6 +65,19 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $values = $this->fields['basiskl_str_mv'] ?? false;
         //return $values ? implode("<br/>", $values) : null;
         return $values ? $values : null;
+    }
+
+    public function getGenres(): array {
+        $genres = $this->fields['bibForm_txtF_mv'] ?? [];
+        if ($genres === []) {
+            foreach ($this->getMarcReader()->getFields('655') as $field) {
+                $genre = $this->getMarcReader()->getSubfield($field, 'a');
+                if ($genre !== '') {
+                    $genres[] = $genre;
+                }
+            }
+        }
+        return (array) $genres;
     }
 
     /**
@@ -236,9 +251,12 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @return array<IlsHoldingId>
      */
     public function getHoldingIds(): array {
-        static $ids = [];
+        if ($this->holdingIds !== null) {
+            return $this->holdingIds;
+        }
+        $ids = [];
         $uniqueId = $this->getUniqueID();
-        if (count($ids) === 0 && $uniqueId !== '') {
+        if (ctype_digit($uniqueId)) {
             $ids[] = new IlsHoldingId($uniqueId);
             $lkrRecords = $this->getMarcFieldsAsObject('773', 1, 8, ['w', 'g']);
             foreach ($lkrRecords as $lkrRecord) {
@@ -253,7 +271,13 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                     // For now we optimistically assume the prefix (which we skip using preg_replace()) doesn't count
                     // There can be multiple LKR records per single holding - collect them in one entry (#24391)
                     $rawId = $record->getRawData()['id'];
-                    $itemFilter = preg_replace('/^.*:/', '', $lkrRecord->g);
+                    if (!ctype_digit((string) $rawId)) {
+                        continue;
+                    }
+                    $itemFilter = array_map(
+                        static fn($value) => preg_replace('/^.*:/', '', $value),
+                        (array) $lkrRecord->g
+                    );
                     if (!isset($ids[$rawId])) {
                         $ids[$rawId] = new IlsHoldingId($rawId, null, $itemFilter, true);
                     } else {
@@ -262,7 +286,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                 }
             }
         }
-        return array_values($ids);
+        return $this->holdingIds = array_values($ids);
     }
 
     /**
@@ -500,7 +524,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         // Get primary meeting author
         $meetingName = $this->fields['author_meeting_txt'] ?? null;
-        $meetingRole = $this->fields['author_meeting_role_str'] ?? [];
+        $meetingRole = $this->fields['author_meeting_role_str'] ?? null;
         $meetingAuth = $this->fields['author_meeting_GndNo_str'] ?? null;
 
         // Get secondary authors
@@ -521,6 +545,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         // Add primary corporation authors to array (values from Marc21 field 110)
         if ($corpName) {
+            $corpRole = is_string($corpRole) && $corpRole !== '' ? $corpRole : self::DEFAULT_AUTHOR_ROLE;
             $contributors[$corpRole][] = [
                 'entity'  => 'corporation',
                 'name'    => $corpName,
@@ -532,6 +557,7 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
 
         // Add primary meeting authors to array (values from Marc21 field 111)
         if ($meetingName) {
+            $meetingRole = is_string($meetingRole) && $meetingRole !== '' ? $meetingRole : self::DEFAULT_AUTHOR_ROLE;
             $contributors[$meetingRole][] = [
                 'entity'  => 'meeting',
                 'name'    => $meetingName,
@@ -665,20 +691,32 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
         $primCorpRole = (array) ($this->fields['author_corporate_role'] ?? []);
         $primCorp     = (array) ($this->fields['author_corporate'] ?? []);
         $primMeet     = (array) ($this->fields['author_meeting_txt'] ?? []);
+        $primMeetRole = (array) ($this->fields['author_meeting_role_str'] ?? []);
         // Secondary authors
         $secPers      = (array) ($this->fields['author2'] ?? []);
         $secOW        = (array) ($this->fields['author2_original_writing_str_mv'] ?? [
             ]);
         $secRole      = (array) ($this->fields['author2_role'] ?? []);
         $secCorp      = (array) ($this->fields['author2_corporate_txt_mv'] ?? []);
+        $secCorpRole  = (array) ($this->fields['author2_corporate_role_str_mv'] ?? []);
         $secMeet      = (array) ($this->fields['author2_meeting_txt_mv'] ?? []);
+        $secMeetRole  = (array) ($this->fields['author2_meeting_role_str_mv'] ?? []);
 
         $authorsCorp       = $this->mergeAuthorsAndRoles($primCorp, $primCorpRole);
         $authors           = $this->mergeAuthorsAndRoles($primPers, $primRole);
         $authors2          = $this->mergeAuthorsAndRoles($secPers, $secRole, $secOW);
         // Merge array
-        $merged            = array_merge($authors, $authorsCorp, $primMeet, $authors2, $secCorp, $secMeet);
-        $mergedWithOutRole = array_merge($primPers, $primCorp, $primMeet, $secPers, $secCorp, $secMeet);
+        $authorsMeet       = $this->mergeAuthorsAndRoles($primMeet, $primMeetRole);
+        $authorsSecCorp    = $this->mergeAuthorsAndRoles($secCorp, $secCorpRole);
+        $authorsSecMeet    = $this->mergeAuthorsAndRoles($secMeet, $secMeetRole);
+        $merged = [];
+        $mergedWithOutRole = [];
+        foreach ([$authors, $authorsCorp, $authorsMeet, $authors2, $authorsSecCorp, $authorsSecMeet] as $group) {
+            foreach ($group as $entry) {
+                $merged[] = $entry['text'];
+                $mergedWithOutRole[] = $entry['name'];
+            }
+        }
 
         //we have to pass two arrays, one if for the display text with the authors and roles
         //the second is for the search url, because if we add the roles also, then the search will fails
@@ -722,29 +760,19 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      */
     private function mergeAuthorsAndRoles(array $names, array $roles,
                                           array $ow = []): array {
-        $authors = array();
-        foreach ($names as $key1 => $value1) {
-            $owStr = "";
-            if (isset($ow[$key1]) && !empty($ow[$key1]) && $ow[$key1] !== 'noLinkedField') {
-                $owStr = $ow[$key1] . ' / ';
+        $authors = [];
+        foreach ($names as $index => $name) {
+            if (!is_string($name) || trim($name) === '') {
+                continue;
             }
-            if (count($authors) > 0) {
-                foreach ($authors as $ak => $av) {
-                    if ($av['name'] == $value1) {
-                        $authors[$ak]['role'][] = $roles[$key1] ?? self::DEFAULT_AUTHOR_ROLE;
-                    } else {
-                        $authors[$key1] = [
-                            "name" => $owStr . $value1,
-                            "role" => [$roles[$key1] ?? self::DEFAULT_AUTHOR_ROLE]
-                        ];
-                    }
-                }
-            } else {
-                $authors[$key1] = [
-                    "name" => $owStr . $value1,
-                    "role" => [$roles[$key1] ?? self::DEFAULT_AUTHOR_ROLE]
-                ];
+            $displayName = !empty($ow[$index]) && $ow[$index] !== 'noLinkedField'
+                ? $ow[$index] . ' / ' . $name : $name;
+            $role = is_string($roles[$index] ?? null) && trim($roles[$index]) !== ''
+                ? $roles[$index] : self::DEFAULT_AUTHOR_ROLE;
+            if (!isset($authors[$name])) {
+                $authors[$name] = ['name' => $displayName, 'role' => []];
             }
+            $authors[$name]['role'][] = $role;
         }
         return $this->mergeRolesForSearchView($authors);
     }
@@ -755,7 +783,10 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
     private function mergeRolesForSearchView(array $authors): array {
         $result = [];
         foreach ($authors as $k => $v) {
-            $result[$k] = $v['name'] . ' [ ' . implode(", ", $v["role"]) . ' ]';
+            $result[] = [
+                'name' => $k,
+                'text' => $v['name'] . ' [ ' . implode(', ', array_unique($v['role'])) . ' ]',
+            ];
         }
         return $result;
     }
@@ -811,55 +842,75 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
      * @return array
      */
     public function getAllSubjectHeadings(mixed $extended = false): array {
-        $returnValue   = [];
-        $subjectFields = $this->getMarcReader()->getFields('689');
-
-        $ind1 = 0;
-        foreach ($subjectFields as $subjectField) {
-            $ind1 = $subjectField['i1'];
-            $ind2 = $subjectField['i2'];
-
-            if (is_numeric($ind1) && is_numeric($ind2)) {
-                //$subfields = $subjectField->getSubfields('[axvtyzbcgh]', true);
-                //$subfields = $this->getSubfields($subjectField);
-                $subfields    = $subjectField['subfields'];
-                $subfieldData = [];
-                foreach ($subfields as $subfield) {
-                    if (in_array($subfield['code'], ['a', 'x', 'v', 't', 'y', 'z',
-                            'b', 'c', 'g', 'h', '0', '2'])) {
-                        $subfieldData[] = $subfield['data'];
-                    }
-                }
-                $returnValue[$ind1][$ind2] = $subfieldData;
+        $chains = [];
+        foreach ($this->getMarcReader()->getFields('689') as $field) {
+            $group = $field['i1'] ?? '';
+            $position = $field['i2'] ?? '';
+            if (!ctype_digit((string) $group) || !ctype_digit((string) $position)) {
+                continue;
             }
-        }
-
-        $subjectFields982 = $this->getMarcReader()->getFields('982');
-        $fieldCount       = $ind1 + 1;
-        foreach ($subjectFields982 as $subjectField982) {
-            $ind1 = $subjectField982['i1'];
-            $ind2 = $subjectField982['i2'];
-            if (empty(trim($ind1)) && empty(trim($ind2))) {
-                $subfields = $this->getSubfields($subjectField982, 'a');
-                if (!empty($subfields)) {
-                    $subfieldData = [];
-                    $tokenCount   = 0;
-                    foreach ($subfields as $subfield) {
-                        $tokens = preg_split("/\s+[\/-]\s+/", $subfield);
-                        foreach ($tokens as $token) {
-                            $returnValue[$fieldCount][$tokenCount] = [$token];
-                            $tokenCount++;
-                        }
-                    }
-                    $fieldCount++;
+            $parts = [];
+            $authority = null;
+            foreach ($field['subfields'] ?? [] as $subfield) {
+                if (in_array($subfield['code'], ['a', 'x', 'v', 't', 'y', 'z', 'b', 'c', 'g', 'h'], true)) {
+                    $parts[] = $subfield['data'];
+                } elseif ($subfield['code'] === '0') {
+                    $authority = $subfield['data'];
                 }
             }
+            if ($parts !== []) {
+                $chains[(int) $group][(int) $position] = [implode(' ', $parts), $authority];
+            }
         }
+        ksort($chains);
+        foreach ($chains as &$chain) {
+            ksort($chain);
+            $chain = array_values($chain);
+        }
+        unset($chain);
+        foreach ($this->getMarcReader()->getFields('982') as $field) {
+            if (trim($field['i1'] ?? '') !== '' || trim($field['i2'] ?? '') !== '') {
+                continue;
+            }
+            $chain = [];
+            foreach ($this->getSubfields($field, 'a') as $value) {
+                foreach (preg_split('/\s+[\/-]\s+/', $value) ?: [] as $term) {
+                    if (trim($term) !== '') {
+                        $chain[] = [trim($term), null];
+                    }
+                }
+            }
+            if ($chain !== []) {
+                $chains[] = $chain;
+            }
+        }
+        return array_values(array_unique($chains, SORT_REGULAR));
+    }
 
-        $returnValue = array_map(
-            'unserialize', array_unique(array_map('serialize', $returnValue))
-        );
-        return $returnValue;
+    /** Subject terms used by citation exports. */
+    public function getAllSubjects(): array {
+        $subjects = [];
+        foreach ($this->getMarcReader()->getFields('689') as $field) {
+            $type = strtoupper($this->getMarcReader()->getSubfield($field, 'D'));
+            if ($type !== 'S') {
+                continue;
+            }
+            $parts = [];
+            foreach ($field['subfields'] ?? [] as $subfield) {
+                if (in_array($subfield['code'], ['a', 'x', 'v', 't', 'y', 'z', 'b', 'c', 'g', 'h'], true)) {
+                    $parts[] = $subfield['data'];
+                }
+            }
+            if ($parts !== []) {
+                $subjects[] = implode(', ', $parts);
+            }
+        }
+        foreach ($this->getMarcReader()->getFields('982') as $field) {
+            foreach ($this->getSubfields($field, 'a') as $value) {
+                $subjects[] = $value;
+            }
+        }
+        return array_values(array_unique($subjects));
     }
 
     /**

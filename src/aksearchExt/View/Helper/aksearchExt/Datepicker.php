@@ -37,7 +37,7 @@ namespace aksearchExt\View\Helper\aksearchExt;
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:view_helpers Wiki
  */
-class Datepicker extends \Zend\View\Helper\AbstractHelper
+class Datepicker extends \Laminas\View\Helper\AbstractHelper
 {
 
     /**

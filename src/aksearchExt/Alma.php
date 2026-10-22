@@ -270,17 +270,8 @@ class Alma extends \VuFind\ILS\Driver\Alma {
      * @return array<string, int>
      */
     protected function sortLibraries(array &$libraries): void {
-        $path = getenv('VUFIND_LOCAL_DIR') . '/config/vufind/facets.ini';
-        if (file_exists($path)) {
-            $libsOrder = explode("\n", file_get_contents($path));
-            $libsOrder = array_filter($libsOrder, fn($x) => str_starts_with(trim($x), 'limitOrderOverride[institution]'));
-            $libsOrder = explode('=', (string) reset($libsOrder));
-            $libsOrder = explode('::', trim((string) end($libsOrder)));
-            $libsOrder = array_flip($libsOrder);
-
-            if (count($libsOrder) > 1) {
-                uksort($libraries, fn($a, $b) => ($libsOrder[$a] ?? 9999) <=> ($libsOrder[$b] ?? 9999));
-            }
-        }
+        $path = __DIR__ . '/libsOrder.txt';
+        $libsOrder = array_flip(array_values(array_filter(array_map('trim', file($path) ?: []))));
+        uksort($libraries, fn($a, $b) => ($libsOrder[$a] ?? 9999) <=> ($libsOrder[$b] ?? 9999));
     }
 }
