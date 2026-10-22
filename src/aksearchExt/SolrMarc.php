@@ -856,6 +856,9 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                     $parts[] = $subfield['data'];
                 } elseif ($subfield['code'] === '0') {
                     $authority = $subfield['data'];
+                } elseif ($subfield['code'] === '2' && $authority === null
+                    && str_starts_with($subfield['data'], 'https://')) {
+                    $authority = $subfield['data'];
                 }
             }
             if ($parts !== []) {
