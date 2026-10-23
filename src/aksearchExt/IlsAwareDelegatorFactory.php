@@ -43,14 +43,8 @@ class IlsAwareDelegatorFactory extends \VuFind\RecordDriver\IlsAwareDelegatorFac
      * @param string             $name      Service name
      * @param callable           $callback  Service callback
      * @param array|null         $options   Service options
-     *
-     * @return AbstractBase
-     *
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
-    public function __invoke(ContainerInterface $container, $name,
-                             callable $callback, array $options = null
-    ) {
+    public function __invoke(ContainerInterface $container, $name, callable $callback, array $options = null) {
         $driver = call_user_func($callback);
 
         // Attach the ILS if at least one backend supports it:

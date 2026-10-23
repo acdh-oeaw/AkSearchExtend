@@ -55,8 +55,6 @@ class Alma extends \VuFind\ILS\Driver\Alma {
      * See docs/holdings.md
      * 
      * @param array<container\IlsHoldingId> $ids
-     * @param string $patron
-     * @param array $options
      * @return array
      */
     public function getHolding($ids, $patron = null, array $options = []) {
@@ -83,11 +81,13 @@ class Alma extends \VuFind\ILS\Driver\Alma {
                 }
             }
             foreach ($holdings->holding ?? [] as $rawHoldingData) {
-                $holdingId                                                           = clone $id;
-                $holdingId->holdingId                                                = (string) $rawHoldingData->holding_id;
-                $holdingData                                                         = new HoldingData($holdingId, (string) $rawHoldingData->$holdingsOrderBy);
-                $this->fillHoldingData($holdingData);
-                $libraries[(string) $rawHoldingData->library][$holdingId->holdingId] = $holdingData;
+                $holdingId                                   = clone $id;
+                $holdingId->holdingId                        = (string) $rawHoldingData->holding_id;
+                if (!isset($libraries[(string) $rawHoldingData->library][$holdingId->holdingId])) {
+                    $holdingData                                 = new HoldingData($holdingId, (string) $rawHoldingData->$holdingsOrderBy);
+                    $this->fillHoldingData($holdingData);
+                    $libraries[(string) $rawHoldingData->library][$holdingId->holdingId] = $holdingData;
+                }
                 // items
                 if (empty($holdingId->mmsId)) {
                     continue;
@@ -128,9 +128,7 @@ class Alma extends \VuFind\ILS\Driver\Alma {
             }
         }
 
-        $libsOrder = explode("\n", file_get_contents(__DIR__ . '/libsOrder.txt'));
-        $libsOrder = array_combine($libsOrder, range(0, count($libsOrder) - 1));
-        uksort($libraries, fn($a, $b) => ($libsOrder[$a] ?? 9999) <=> ($libsOrder[$b] ?? 9999));
+        $this->sortLibraries($libraries);
         foreach ($libraries as &$i) {
             // non-lkr first, within (non)lkr group by the orderBy property
             usort($i, fn($a, $b) => $a->id->lkr !== $b->id->lkr ? $a->id->lkr <=> $b->id->lkr : $b->orderBy <=> $a->orderBy);
@@ -166,7 +164,7 @@ class Alma extends \VuFind\ILS\Driver\Alma {
     /**
      * Parse a date.
      *
-     * @param string  $date     Date to parse
+     * @param mixed  $date     Date to parse
      * @param boolean $withTime Add time to return if available?
      *
      * @return string
@@ -187,7 +185,7 @@ class Alma extends \VuFind\ILS\Driver\Alma {
         $timestampMs = "/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}Z$/";
         // e. g. 2017-07-09T18:00:00
 
-        if ($date == null || $date == '') {
+        if (empty($date)) {
             return '';
         } elseif (preg_match($compactDate, $date) === 1) {
             return $this->dateConverter->convertToDisplayDate('Ynd', $date);
@@ -235,15 +233,13 @@ class Alma extends \VuFind\ILS\Driver\Alma {
      * We have to override the base method to fetch the values from our ALMA config.
      * 
      * https://redmine.acdh.oeaw.ac.at/issues/21372
-     * @param type $patron
-     * @return type
      */
-    public function getPickupLocations($patron) {
+    public function getPickupLocations($patron, $holdDetails = null): array {
         // Variable for returning
         $filteredPul = null;
 
         // Get pickup locations from Alma
-        $pul = parent::getPickupLocations($patron);
+        $pul = parent::getPickupLocations($patron, $holdDetails);
 
         // Get config "validPickupLocations" and check if it is set
         $validPulS = $this->config['Holds']['validPickupLocations'] ?? null ?: null;
@@ -261,5 +257,21 @@ class Alma extends \VuFind\ILS\Driver\Alma {
 
         // Return result (resets the array keys with array_values)
         return ($filteredPul) ? array_values($filteredPul) : $pul;
+    }
+
+    /**
+     * See https://redmine.acdh.oeaw.ac.at/issues/23897
+     * 
+     * Quite an ugly brut-force hardcoding but as we need to access configuration 
+     * of a module which is completely unrelated according to the VuFind logic 
+     * I am too lazy to look for a nicer implementation.
+     * 
+     * @param array<string, mixed> $libraries
+     * @return array<string, int>
+     */
+    protected function sortLibraries(array &$libraries): void {
+        $path = __DIR__ . '/libsOrder.txt';
+        $libsOrder = array_flip(array_values(array_filter(array_map('trim', file($path) ?: []))));
+        uksort($libraries, fn($a, $b) => ($libsOrder[$a] ?? 9999) <=> ($libsOrder[$b] ?? 9999));
     }
 }

@@ -26,12 +26,19 @@
 
 namespace aksearchExt\RecordTab;
 
+use aksearchExt\SolrMarc;
+
 /**
  * Description of HoldingsTab
  *
  * @author zozlak
  */
 class HoldingsILS extends \VuFind\RecordTab\HoldingsILS {
+
+    /**
+     * @var SolrMarc|null $driver
+     */
+    protected $driver = null;
 
     public function isActive(): bool {
         if ($this->driver->hasElectronicHoldings()) {

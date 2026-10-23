@@ -33,7 +33,7 @@ use SimpleXMLElement;
  *
  * @author zozlak
  */
-class HoldingData {
+class HoldingData implements \ArrayAccess {
 
     public string $libraryCode       = '';
     public string $locationCode      = '';
@@ -44,7 +44,7 @@ class HoldingData {
     public string $holdingsPrefix    = '';
     public string $holdingsNotes     = '';
     public string $orderBy           = '';
-    public ?IlsHoldingId $id                = null;
+    public ?IlsHoldingId $id         = null;
 
     /**
      * Related people and organizations from holding field 695.
@@ -57,7 +57,7 @@ class HoldingData {
      * 
      * @var array<ItemData>
      */
-    public array $items    = [];
+    public array $items = [];
 
     /**
      * 
@@ -138,5 +138,21 @@ class HoldingData {
             $data->$code = (string) $i;
         }
         return $data;
+    }
+
+    public function offsetExists(mixed $offset): bool {
+        return isset($this->$offset);
+    }
+
+    public function offsetGet(mixed $offset): mixed {
+        return $this->$offset;
+    }
+
+    public function offsetSet(mixed $offset, mixed $value): void {
+        $this->$offset = $value;
+    }
+
+    public function offsetUnset(mixed $offset): void {
+        unset($this->$offset);
     }
 }

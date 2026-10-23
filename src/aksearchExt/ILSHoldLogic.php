@@ -41,13 +41,13 @@ class ILSHoldLogic extends \VuFind\ILS\Logic\Holds {
      *
      * @param array<\aksearchExt\container\IlsHoldingId> $ids A list of ILS ids
      *   to be checked
-     * @param null  $consortiumIds Not used, kept for signature compatibility
+     * @param mixed  $consortiumIds Not used, kept for signature compatibility
      * @param array  $options Optional options to pass on to getHolding()
      *
      * @return array A sorted results set
      */
-    public function getHoldings($ids, $consortiumIds = null, $options = []) {
-        if (!$this->catalog) {
+    public function getHoldings($ids, $consortiumIds = null, $options = []): array {
+        if (!isset($this->catalog)) {
             return [];
         }
         if ($consortiumIds !== null) {
