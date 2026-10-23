@@ -45,6 +45,10 @@ class RecordDataFormatterFactory extends \AkSearch\View\Helper\Root\RecordDataFo
         $spec->setTemplateLine(
             'Superior document', 'getSuperiorDocument', 'data-superiorDocument.phtml'
         );
+
+        $spec->setTemplateLine(
+            'Related document', 'getRelatedDocument', 'data-relatedDocument.phtml'
+        );
         
         $spec->setTemplateLine(
             'Title supplement to the whole collection', 'getTitleAddition', 'data-titleAddition.phtml'
@@ -53,7 +57,7 @@ class RecordDataFormatterFactory extends \AkSearch\View\Helper\Root\RecordDataFo
         $spec->setTemplateLine(
             'Statement of responsibility for the whole collection', 'getStatementOfResponsibility', 'data-statementOfResponsibility.phtml'
         );
-         
+
         // AK: Getting parent records with direct link to the parent records detail
         // page.
         $spec->setTemplateLine(

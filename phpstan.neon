@@ -1,0 +1,4 @@
+parameters:
+  scanDirectories:
+  - aksearch
+  - vendor/vufind/vufind/module/

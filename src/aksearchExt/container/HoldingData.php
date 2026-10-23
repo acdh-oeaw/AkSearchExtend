@@ -33,7 +33,7 @@ use SimpleXMLElement;
  *
  * @author zozlak
  */
-class HoldingData {
+class HoldingData implements \ArrayAccess {
 
     public string $libraryCode       = '';
     public string $locationCode      = '';
@@ -44,13 +44,20 @@ class HoldingData {
     public string $holdingsPrefix    = '';
     public string $holdingsNotes     = '';
     public string $orderBy           = '';
-    public ?IlsHoldingId $id                = null;
+    public ?IlsHoldingId $id         = null;
+
+    /**
+     * Related people and organizations from holding field 695.
+     *
+     * @var array<array{indicator: string, subfields: array<array{code: string, value: string}>}>
+     */
+    public array $relatedAgents = [];
 
     /**
      * 
      * @var array<ItemData>
      */
-    public array $items    = [];
+    public array $items = [];
 
     /**
      * 
@@ -74,6 +81,20 @@ class HoldingData {
                     $this->locationCode    = $subfields->c ?? '';
                     $this->callNos         = $subfields->h ?? '';
                     $this->callNumberNotes = $subfields->z ?? '';
+                } elseif ($attr['tag'] == '695') {
+                    $agent = [
+                        'indicator' => (string) $attr['ind1'],
+                        'subfields' => [],
+                    ];
+                    foreach ($field->subfield as $subfield) {
+                        $agent['subfields'][] = [
+                            'code'  => (string) $subfield->attributes()['code'],
+                            'value' => (string) $subfield,
+                        ];
+                    }
+                    if (count($agent['subfields']) > 0) {
+                        $this->relatedAgents[] = $agent;
+                    }
                 } elseif ($tag === '866_30') {
                     $subfields               = $this->extractMarcSubfields($field);
                     $this->holdingsAvailable = $subfields->a ?? '';
@@ -117,5 +138,21 @@ class HoldingData {
             $data->$code = (string) $i;
         }
         return $data;
+    }
+
+    public function offsetExists(mixed $offset): bool {
+        return isset($this->$offset);
+    }
+
+    public function offsetGet(mixed $offset): mixed {
+        return $this->$offset;
+    }
+
+    public function offsetSet(mixed $offset, mixed $value): void {
+        $this->$offset = $value;
+    }
+
+    public function offsetUnset(mixed $offset): void {
+        unset($this->$offset);
     }
 }

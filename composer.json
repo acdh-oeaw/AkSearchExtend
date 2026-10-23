@@ -11,11 +11,22 @@
         }
     ],
     "require": {
-        "php": ">=7"
+        "php": ">=8.1",
+        "vufind-org/vufind-marc": "^1.1"
     },
     "autoload": {
         "psr-4": {
             "aksearchExt\\": "src/aksearchExt"
+        }
+    },
+    "require-dev": {
+        "phpstan/phpstan": "*",
+        "vufind/vufind": "^10",
+        "ahand/mobileesp": "dev-master"
+    },
+    "config": {
+        "allow-plugins": {
+            "wikimedia/composer-merge-plugin": true
         }
     }
 }

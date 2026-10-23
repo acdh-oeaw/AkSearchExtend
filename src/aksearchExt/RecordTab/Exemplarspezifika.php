@@ -48,10 +48,8 @@ class Exemplarspezifika extends \VuFind\RecordTab\HoldingsILS {
      
     /**
      * AK: Check if this record has parent records
-     *
-     * @return bool
      */
-    public function hasParents() {
+    public function hasParents(): bool {
         return $this->getRecordDriver()->tryMethod('hasParents');
     }
 
@@ -60,29 +58,25 @@ class Exemplarspezifika extends \VuFind\RecordTab\HoldingsILS {
      *
      * @return array|null An array of parent record information or null
      */
-    public function getParents() {
+    public function getParents(): array | null {
         return $this->getRecordDriver()->tryMethod('getConsolidatedParents');
     }
 
     /**
      * AK: Check if this record has child records
-     *
-     * @return bool
      */
-    public function hasChilds() {
+    public function hasChilds(): bool {
         return $this->getRecordDriver()->tryMethod('hasChilds');
     }
 
     /**
      * AK: Get summarized holdings.
-     *
-     * @return void
      */
-    public function getSummarizedHoldings() {
+    public function getSummarizedHoldings(): mixed {
         return $this->getRecordDriver()->tryMethod('getSummarizedHoldings');
     }
 
-    public function getDescription() {
+    public function getDescription(): string {
         return 'Exemplarspezifika';
     }
 }

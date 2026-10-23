@@ -6,8 +6,8 @@ class Field880Helper {
 
     private $data;
     private static $titleEnabledFields = ['a', 'b', 'n', 'p', 'c'];
-    private $fields = [];
-    private $availableFields = [];
+    private $fields                    = [];
+    private $availableFields           = [];
 
     /**
      * 
@@ -23,7 +23,6 @@ class Field880Helper {
      * @return string
      */
     public function getTitle880(): string {
-
         if (!$this->getField6Values()) {
             return "";
         }
@@ -33,6 +32,49 @@ class Field880Helper {
         }
 
         return $this->fetchTitle();
+    }
+
+    /**
+     * Get selected subfield values from the 880 linked to a MARC field.
+     *
+     * @param string $fieldTag       Tag of the linked field (for example 505)
+     * @param string $linkageValue   Value of the linked field's subfield 6
+     * @param array  $subfieldCodes Subfields to return from the 880
+     *
+     * @return array<string>
+     */
+    public function getLinkedSubfieldValues(string $fieldTag, string $linkageValue, array $subfieldCodes): array {
+        if (!preg_match('/^880-([0-9]{2})(?:\/|$)/', $linkageValue, $matches)) {
+            return [];
+        }
+
+        $expectedLinkage = $fieldTag . '-' . $matches[1];
+        $values          = [];
+        foreach ($this->data as $field) {
+            $fieldLinkages = $field->{6} ?? [];
+            $fieldLinkages = is_array($fieldLinkages) ? $fieldLinkages : [$fieldLinkages];
+            $isLinked      = false;
+            foreach ($fieldLinkages as $fieldLinkage) {
+                if (preg_match('/^' . preg_quote($expectedLinkage, '/') . '(?:\/|$)/', $fieldLinkage)) {
+                    $isLinked = true;
+                    break;
+                }
+            }
+            if (!$isLinked) {
+                continue;
+            }
+
+            foreach ($subfieldCodes as $code) {
+                $subfieldValues = $field->{$code} ?? [];
+                $subfieldValues = is_array($subfieldValues) ? $subfieldValues : [$subfieldValues];
+                foreach ($subfieldValues as $value) {
+                    if ($value !== '') {
+                        $values[] = $value;
+                    }
+                }
+            }
+        }
+        return $values;
     }
 
     /**
@@ -50,7 +92,6 @@ class Field880Helper {
      * @return string
      */
     private function fetchTitle(): string {
-
         $str = "";
         $isN = false;
         if (array_key_exists("n", $this->availableFields)) {
@@ -62,11 +103,11 @@ class Field880Helper {
             if (strtolower($k) == "a") {
                 $str .= implode(' , ', $v);
             }
-            
+
             $this->createStrByRules($str, $v, $k, "b", " : ");
 
             $this->createStrByRules($str, $v, $k, "n", " . ");
-           
+
             if (strtolower($k) == "p" && $isN) {
                 if (!empty($str)) {
                     $str .= " : " . implode(' , ', $v);
@@ -80,14 +121,12 @@ class Field880Helper {
                     $str .= implode(' , ', $v);
                 }
             }
-            
+
             $this->createStrByRules($str, $v, $k, "c", " / ");
-        
         }
         return $str;
     }
-    
-   
+
     /**
      * Fetch the field by the rules
      * @param string $str
@@ -96,7 +135,8 @@ class Field880Helper {
      * @param string $field
      * @param string $separator
      */
-    private function createStrByRules(string &$str = "", array $v, string $k, string $field, string $separator) {
+    private function createStrByRules(string &$str, array $v, string $k,
+                                      string $field, string $separator) {
         if (strtolower($k) == $field) {
             if (!empty($str)) {
                 $str .= $separator . implode(' , ', $v);
