@@ -464,7 +464,12 @@ class SolrMarc extends \AkSearch\RecordDriver\SolrMarc {
                                            bool | array $singleValueAsLiteral = true): array {
         $marc   = $this->getMarcReader();
         $fields = [];
-        foreach ($marc->getFields(sprintf('%03d', $field)) as $i) {
+        // Standard MARC tags are numeric and need zero-padding; local tags such
+        // as AVE are alphabetic and must be looked up unchanged.
+        $tag = preg_match('/^\d{1,3}$/D', $field) === 1
+            ? sprintf('%03d', (int)$field)
+            : $field;
+        foreach ($marc->getFields($tag) as $i) {
             if (is_array($i) && ($ind1 !== null && intval($i['i1']) !== $ind1 || $ind2 !== null && intval($i['i2']) !== $ind2)) {
                 continue;
             }
