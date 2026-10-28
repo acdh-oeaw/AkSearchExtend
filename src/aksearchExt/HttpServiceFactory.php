@@ -58,11 +58,38 @@ class HttpServiceFactory implements FactoryInterface {
             if (isset($config->Proxy->type)) {
                 $options['proxy_type'] = $config->Proxy->type;
             }
+        } else {
+            // The app's outbound proxy is often supplied by the runtime
+            // environment instead of config.ini (e.g. in container setups).
+            $proxyUrl = getenv('HTTPS_PROXY') ?: getenv('https_proxy')
+                ?: getenv('HTTP_PROXY') ?: getenv('http_proxy');
+            if ($proxyUrl !== false && $proxyUrl !== '') {
+                if (!preg_match('#^[a-z][a-z0-9+.-]*://#i', $proxyUrl)) {
+                    $proxyUrl = 'http://' . $proxyUrl;
+                }
+                $proxy = parse_url($proxyUrl);
+                if ($proxy === false || empty($proxy['host'])) {
+                    throw new \RuntimeException('Invalid HTTP proxy URL in environment.');
+                }
+                $options['proxy_host'] = $proxy['host'];
+                $options['proxy_port'] = $proxy['port']
+                    ?? (strtolower($proxy['scheme'] ?? 'http') === 'https' ? 443 : 80);
+                if (isset($proxy['user'])) {
+                    $options['proxy_user'] = rawurldecode($proxy['user']);
+                }
+                if (isset($proxy['pass'])) {
+                    $options['proxy_pass'] = rawurldecode($proxy['pass']);
+                }
+            }
         }
         $defaults = isset($config->Http) ? $config->Http->toArray() : [];
         $extra = [];
-        if (isset($config->Proxy->no_proxy)) {
-            $extra['localAddressesRegEx'] = '@^(' . str_replace(',', '|', $config->Proxy->no_proxy) . ')@';
+        $noProxy = $config->Proxy->no_proxy ?? '';
+        if (!$noProxy) {
+            $noProxy = getenv('NO_PROXY') ?: getenv('no_proxy') ?: '';
+        }
+        if ($noProxy !== '') {
+            $extra['localAddressesRegEx'] = '@^(' . str_replace(',', '|', $noProxy) . ')@';
         }
         return new $requestedName($options, $defaults, $extra);
     }
